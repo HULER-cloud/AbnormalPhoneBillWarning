@@ -1,6 +1,7 @@
 package models
 
 type UserBusinessModel struct {
+	MODEL  `json:"model"`
 	UserID uint `gorm:"primaryKey" json:"user_id"`
 	//UserModel     UserModel     `gorm:"foreignKey:UserID" json:"user_model"`
 	BusinessID uint `gorm:"primaryKey" json:"business_id"`

@@ -1,6 +1,7 @@
 package user_api
 
 import (
+	"AbnormalPhoneBillWarning/middleware/mdw_jwt"
 	"AbnormalPhoneBillWarning/models"
 
 	"AbnormalPhoneBillWarning/routers/response"
@@ -10,8 +11,8 @@ import (
 
 func (UserAPI) UserListView(c *gin.Context) {
 
-	//_claims, _ := c.Get("claims")
-	//claims := _claims.(*mdw_jwt.MyClaims) // 断言一下，因为拿过来的是any
+	_claims, _ := c.Get("claims")
+	claims := _claims.(*mdw_jwt.MyClaims) // 断言一下，因为拿过来的是any
 
 	var pageInfo models.PageInfo
 	err := c.ShouldBindQuery(&pageInfo)
@@ -21,7 +22,7 @@ func (UserAPI) UserListView(c *gin.Context) {
 		return
 	}
 
-	count, userList := utils.ListMethod[models.UserModel](pageInfo)
+	count, userList := utils.ListMethod[models.UserModel](claims.UserID, pageInfo)
 	var users []models.UserModel
 	for _, item := range userList {
 

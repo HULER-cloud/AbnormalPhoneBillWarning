@@ -1,11 +1,13 @@
 package api
 
 import (
+	"AbnormalPhoneBillWarning/api/bussiness_api"
 	"AbnormalPhoneBillWarning/api/user_api"
 )
 
 type APIGroup struct {
-	UserAPI user_api.UserAPI
+	UserAPI     user_api.UserAPI
+	BusinessAPI bussiness_api.BusinessAPI
 	//SettingsAPI settings_api.SettingsAPI
 	//ImageAPI    image_api.ImageAPI
 	//AdAPI       ad_api.AdAPI

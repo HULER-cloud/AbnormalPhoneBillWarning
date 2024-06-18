@@ -15,6 +15,7 @@ func InitRouter() {
 
 	// 按模块封装路由
 	UserRoute(router)
+	BusinessRoute(router)
 	//SettingsRoute(router) // 设置模块
 	//ImageRoute(router)    // 图片模块
 	//AdRoute(router)

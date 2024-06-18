@@ -35,16 +35,16 @@ func (UserAPI) UserRegisterView(c *gin.Context) {
 
 	// 生成验证码并发送在别的地方
 	// 这里是验证发送过去的验证码的逻辑
-	var userRegisterModel models.UserRegisterModel
+	var userRegisterModel models.UserCodeModel
 	// 取最新的一条，也即最近一条发送的验证码
-	count = global.DB.Order("created_at desc").Where("email = ?", userRegisterRequest.Email).Take(&userRegisterModel).RowsAffected
+	count = global.DB.Order("created_at desc").Where("email = ? and type = ?", userRegisterRequest.Email, "注册").Take(&userRegisterModel).RowsAffected
 	if count == 0 {
 		response.FailedWithMsg("验证码入库失败，请刷新后重试！", c)
 		return
 	}
 	// 先看时间是否过期
 	now := time.Now()
-	register_time := userRegisterModel.RegisterTime
+	register_time := userRegisterModel.SendTime
 	if now.Sub(register_time).Seconds() > float64(global.Config.Expire.CodeS) {
 		response.FailedWithMsg("验证码已过期，请重试！", c)
 		return

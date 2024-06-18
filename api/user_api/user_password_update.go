@@ -40,8 +40,8 @@ func (UserAPI) UserPasswordUpdateView(c *gin.Context) {
 	}
 
 	// 生成新密码的哈希值，并入库
-	hashedPwd := utils.HashPwd(userPasswordUpdateRequest.Password)
-	err = global.DB.Model(&userModel).Update("password", hashedPwd).Error
+	hashPwd := utils.HashPwd(userPasswordUpdateRequest.Password)
+	err = global.DB.Model(&userModel).Update("password", hashPwd).Error
 	if err != nil {
 		log.Println("密码修改失败！")
 		response.FailedWithMsg("密码修改失败！", c)

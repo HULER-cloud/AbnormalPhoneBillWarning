@@ -15,6 +15,6 @@ func MakeMigrations() {
 			&models.BusinessModel{},
 			&models.UserBusinessModel{},
 			&models.UserBusinessHistoryModel{},
-			&models.UserRegisterModel{},
+			&models.UserCodeModel{},
 		)
 }

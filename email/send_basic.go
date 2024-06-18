@@ -21,6 +21,7 @@ const (
 	BalanceWarning     = "余额异常"
 	ConsumptionWarning = "消费异常"
 	RegisterCode       = "注册验证码"
+	ResetCode          = "密码重置验证码"
 )
 
 type SendEmailAPI struct {
@@ -35,6 +36,9 @@ func NewConsumptionWarning() SendEmailAPI {
 }
 func NewRegisterCode() SendEmailAPI {
 	return SendEmailAPI{Subject: RegisterCode}
+}
+func NewResetCode() SendEmailAPI {
+	return SendEmailAPI{Subject: ResetCode}
 }
 
 // Send 调用方式是 email.NewCode().Send(arg1目标邮箱地址, arg2邮件类型, arg3邮件正文, arg4业务基本信息)
