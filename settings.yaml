@@ -4,12 +4,12 @@ email:
   recv_host: imap.qq.com
   recv_port: 993
   user: 2799591178@qq.com
-  password: "kenmohcdqtiydgac"
+  password: "nopasswordhere"
   default_from_email: 话费预警小帮手
   use_ssl: true
   use_tls: true
 system:
-  host: 127.0.0.1
+  host: 0.0.0.0
   port: 8080
   env: debug
 jwt:

@@ -7,11 +7,13 @@ import (
 	"AbnormalPhoneBillWarning/routers/response"
 	"AbnormalPhoneBillWarning/utils"
 	"github.com/gin-gonic/gin"
+	"time"
 )
 
 type BusinessInfo struct {
-	BusinessName string  `json:"business_name"`
-	Spending     float32 `json:"spending"`
+	BusinessName string    `json:"business_name"`
+	Spending     float32   `json:"spending"`
+	QueryDate    time.Time `json:"query_date"`
 }
 
 func (BusinessAPI) BusinessInfoGetView(c *gin.Context) {
@@ -45,6 +47,7 @@ func (BusinessAPI) BusinessInfoGetView(c *gin.Context) {
 		resp := BusinessInfo{
 			BusinessName: businessModel.BusinessName,
 			Spending:     userBusiness.Spending,
+			QueryDate:    businessModel.UpdatedAt,
 		}
 		returnList = append(returnList, resp)
 	}
