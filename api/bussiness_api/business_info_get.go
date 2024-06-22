@@ -47,7 +47,7 @@ func (BusinessAPI) BusinessInfoGetView(c *gin.Context) {
 		resp := BusinessInfo{
 			BusinessName: businessModel.BusinessName,
 			Spending:     userBusiness.Spending,
-			QueryDate:    businessModel.UpdatedAt,
+			QueryDate:    userBusiness.UpdatedAt,
 		}
 		returnList = append(returnList, resp)
 	}
