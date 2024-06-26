@@ -1,4 +1,4 @@
-package main
+package utils_spider
 
 import (
 	"AbnormalPhoneBillWarning/global"
@@ -27,26 +27,14 @@ type Subscription struct {
 	SubscriptionAmount float32 `json:"subscription_amount"`
 }
 
-func main() {
-	Spider(1, "山东", "17353825020", "153231")
+func TTT() {
+	Spider("山东", 1, "17353825020", "153231")
 	//jsonStr := "{\n  \"balance\": 56.82,\n  \"timeStamp\": \"2024/06/25 19:12:31\",\n  \"consumption_condition\": {\n    \"consumption_amount\": 3.15,\n    \"consumption_set\": [\n      {\n        \"subscription_name\": \"20元包20G国内流量包\",\n        \"subscription_amount\": 0.0\n      },\n      {\n        \"subscription_name\": \"iFree卡（2016版）\",\n        \"subscription_amount\": 3.0\n      },\n      {\n        \"subscription_name\": \"国内通话费\",\n        \"subscription_amount\": 0.15\n      }\n    ]\n  }\n}"
-	//JSONProcess([]byte(jsonStr), 1)
+	jsonStr := "{\n  \"user_id\": 1,\n  \"balance\": 56.82,\n  \"timeStamp\": \"2024/06/25 19:12:31\",\n  \"consumption_condition\": {\n    \"consumption_amount\": 3.15,\n    \"consumption_set\": [\n      {\n        \"subscription_name\": \"20元包20G国内流量包\",\n        \"subscription_amount\": 0.0\n      },\n      {\n        \"subscription_name\": \"iFree卡（2016版）\",\n        \"subscription_amount\": 3.0\n      },\n      {\n        \"subscription_name\": \"国内通话费\",\n        \"subscription_amount\": 0.15\n      }\n    ]\n  }\n}"
+	JSONProcess([]byte(jsonStr), 1)
 }
 
-func testfun(phoneNum string, pwd string) {
-	// 一层传参
-	cmd := exec.Command("python", "execute.py", phoneNum, pwd)
-	output, err := cmd.Output()
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
-	}
-
-	// 打印爬取结果
-	fmt.Println(string(output))
-}
-
-func Spider(userID uint, province string, phoneNum string, pwd string) {
+func Spider(province string, userID uint, phoneNum string, pwd string) {
 	var targetFile string
 	if province == "山东" {
 		targetFile = "slide.py"
@@ -55,7 +43,7 @@ func Spider(userID uint, province string, phoneNum string, pwd string) {
 	}
 
 	// 一层传参
-	cmd := exec.Command("python", "execute.py", strconv.Itoa(int(userID)), targetFile, phoneNum, pwd)
+	cmd := exec.Command("python", "execute.py", targetFile, strconv.Itoa(int(userID)), phoneNum, pwd)
 	output, err := cmd.Output()
 	if err != nil {
 		fmt.Println("Error:", err)

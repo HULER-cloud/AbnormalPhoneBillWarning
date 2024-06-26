@@ -249,7 +249,7 @@ def txt2json(input_file):
 
     timestamp = datetime.now().strftime("%Y/%m/%d %H:%M:%S")  # 获取当前时间戳
     # 构造 JSON 数据
-    data["user_id"] = userID
+    data["user_id"] = int(userID)
     data["balance"] = float(balance)
     data["timeStamp"] = timestamp
     data["consumption_condition"] = {

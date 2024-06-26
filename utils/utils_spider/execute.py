@@ -1,8 +1,9 @@
 import subprocess
 import sys
 
-userID = sys.argv[1]
-targetFile = sys.argv[2]
+
+targetFile = sys.argv[1]
+userID = sys.argv[2]
 phoneNum = sys.argv[3]
 pwd = sys.argv[4]
 
