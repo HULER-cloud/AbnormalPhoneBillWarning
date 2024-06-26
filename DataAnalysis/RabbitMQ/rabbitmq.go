@@ -1,13 +1,12 @@
 package RabbitMQ
 
 import (
-	"encoding/json"
 	"log"
 
 	"github.com/streadway/amqp"
 )
 
-const url = "amqp://admin:B1gmaos@localhost:5672/"
+const url = "amqp://guest:guest@localhost:5672/"
 
 type RabbitMQ struct {
 	Connection *amqp.Connection
@@ -17,6 +16,10 @@ type RabbitMQ struct {
 	Exchange  string
 	Key       string
 	Mqurl     string
+}
+
+type JSON_Format interface {
+	JSON_Marshal(any) ([]byte, error)
 }
 
 func New_RabbitMQ_Struct(queueName string, exchange string, key string) *RabbitMQ {
@@ -49,7 +52,8 @@ func New_RabbitMQ_Work(queueName string) *RabbitMQ {
 	return rabbitmq
 }
 
-func (mq *RabbitMQ) Publish_Work_JSON(message map[string]interface{}) {
+// any 需要为json格式的结构体
+func (mq *RabbitMQ) Publish_Work_JSON(format JSON_Format, message any) {
 	_, err := mq.Channel.QueueDeclare(
 		mq.QueueName,
 		true,  //是否持久化
@@ -60,8 +64,37 @@ func (mq *RabbitMQ) Publish_Work_JSON(message map[string]interface{}) {
 	)
 	mq.ErrorCatch(err, "Failed to declare a queue")
 
-	body, err := json.Marshal(message)
+	body, err := format.JSON_Marshal(message)
 	mq.ErrorCatch(err, "Failed to encode task to JSON")
+
+	err = mq.Channel.Publish(
+		mq.Exchange,
+		mq.QueueName,
+		//如果为true，根据自身exchange类型和routekey规则无法找到符合条件的队列会把消息返还给发送者
+		false,
+		//如果为true，当exchange发送消息到队列后发现队列上没有消费者，则会把消息返还给发送者
+		false,
+		amqp.Publishing{
+			ContentType: "application/json",
+			Body:        body,
+		},
+	)
+	mq.ErrorCatch(err, "Failed to publish message")
+
+}
+
+func (mq *RabbitMQ) Publish_Work_JSON_String(json_str string) {
+	_, err := mq.Channel.QueueDeclare(
+		mq.QueueName,
+		true,  //是否持久化
+		false, //是否自动删除
+		false, //是否具有排他性
+		false, //是否阻塞处理
+		nil,   //额外属性
+	)
+	mq.ErrorCatch(err, "Failed to declare a queue")
+
+	body := []byte(json_str)
 
 	err = mq.Channel.Publish(
 		mq.Exchange,

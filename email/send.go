@@ -13,17 +13,17 @@ import (
 
 func AbnormalTaskSend(jsonStr string, email_address string) {
 	// json怎么过来的还有待具体实现，这里先写死在这里方便先写后续逻辑
-	jsonStr = `{
-  "id":100,
-  "missionID":0,
- "mission":
-  {
-  "timeStamp": "2024年6月26日01:10:30",
-  "balance": 23.05,
-	"cost":0,
-  "abnormal_consumption":[]
- }
-}`
+	//	jsonStr = `{
+	//  "id":100,
+	//  "missionID":0,
+	// "mission":
+	//  {
+	//  "timeStamp": "2024年6月26日01:10:30",
+	//  "balance": 23.05,
+	//	"cost":0,
+	//  "abnormal_consumption":[]
+	// }
+	//}`
 	// 从json反序列化为异常任务结构体对象
 	task := abnormal_task.Task{}
 	err := json.Unmarshal([]byte(jsonStr), &task)

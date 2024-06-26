@@ -1,6 +1,7 @@
 package main
 
 import (
+	dataanalysis "AbnormalPhoneBillWarning/DataAnalysis"
 	"AbnormalPhoneBillWarning/command"
 	"AbnormalPhoneBillWarning/core"
 	"AbnormalPhoneBillWarning/global"
@@ -26,6 +27,9 @@ func main() {
 	//}
 
 	//utils_spider.TTT()
+	//go app.InitTimeTable()
+	//go app.UpdateDefaultAccessTimer(utils_spider.Spider)
+	go dataanalysis.DataAnalysis()
 
 	routers.InitRouter()
 	addr := global.Config.System.Addr()

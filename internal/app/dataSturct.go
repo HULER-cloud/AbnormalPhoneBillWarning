@@ -1,26 +1,13 @@
-package models
+package app
 
 import (
 	"encoding/json"
 	"time"
 )
 
-type UserModel struct {
-	MODEL    `json:"model"`
-	Email    string `json:"user_email"`    // 用户账号（邮箱）
-	Password string `json:"user_password"` // 用户密码
-
-	DefaultQueryTime  string  `json:"user_default_query_time"`
-	QueryTime         string  `json:"user_query_time"`         // 用户每日的查询时间
-	Balance           float32 `json:"user_balance"`            // 用户当前余额
-	BalanceThreshold  float32 `json:"user_balance_threshold"`  // 用户余额阈值
-	BusinessThreshold float32 `json:"user_business_threshold"` // 用户业务阈值
-
-	Phone         string `json:"phone"`          // 用户手机号
-	PhonePassword string `json:"phone_password"` // 登运营商用的密码
-	Province      string `json:"province"`       // 省份
-
-	BusinessModels []BusinessModel `gorm:"many2many:user_business_models"` // 用于多对多关系表
+// JSON_Format 接口定义
+type JSON_Format interface {
+	JSON_Marshal() ([]byte, error)
 }
 
 // UserFromDB 代表用户数据的结构体
@@ -57,5 +44,60 @@ func (u UserFromDB) MarshalJSON() ([]byte, error) {
 	}{
 		Alias:         (Alias)(u),
 		UserQueryTime: formattedTime,
+	})
+}
+
+type BusinessFromDB struct {
+	BusinessID   int    `redis:"id" json:"id" gorm:"column:business_id;primaryKey;autoIncrement"`
+	BusinessName string `redis:"name" json:"name" gorm:"column:business_name;type:varchar(255);not null"`
+}
+
+func (BusinessFromDB) TableName() string {
+	return "businesses"
+}
+
+func (b BusinessFromDB) JSON_Marshal() ([]byte, error) {
+	return json.Marshal(b)
+}
+
+type UserBusinessFromDB struct {
+	UserID     int     `redis:"user_id" json:"user_id" gorm:"column:user_id;primaryKey" `
+	BusinessID int     `redis:"business_id" json:"business_id" gorm:"column:business_id;primaryKey" `
+	Spending   float64 `redis:"spending" json:"spending" gorm:"column:spending" `
+}
+
+func (ub UserBusinessFromDB) TableName() string {
+	return "user_businesses"
+}
+
+func (ub UserBusinessFromDB) JSON_Marshal() ([]byte, error) {
+	return json.Marshal(ub)
+}
+
+type UserBusinessHistory struct {
+	ub       UserBusinessFromDB
+	Spending float64 `json:"spending" gorm:"column:spending"`
+}
+
+func (h UserBusinessHistory) TableName() string {
+	return "user_business_history"
+}
+
+func (h UserBusinessHistory) JSON_Marshal() ([]byte, error) {
+	return json.Marshal(h)
+}
+
+func (h UserBusinessHistory) MarshalJSON() ([]byte, error) {
+	type Alias UserBusinessHistory // 别名
+
+	// 格式化 QueryDate 仅保留日期部分
+	formattedTime := h.QueryDate.Format("2006-01-02")
+
+	return json.Marshal(&struct {
+		Alias
+		QueryDate string `json:"user_query_time"`
+	}{
+		Alias:     (Alias)(h),
+		QueryDate: formattedTime,
 	})
 }
