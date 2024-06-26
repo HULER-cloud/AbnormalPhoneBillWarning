@@ -30,20 +30,20 @@ type Subscription struct {
 func TTT() {
 	Spider("山东", 1, "17353825020", "153231")
 	//jsonStr := "{\n  \"balance\": 56.82,\n  \"timeStamp\": \"2024/06/25 19:12:31\",\n  \"consumption_condition\": {\n    \"consumption_amount\": 3.15,\n    \"consumption_set\": [\n      {\n        \"subscription_name\": \"20元包20G国内流量包\",\n        \"subscription_amount\": 0.0\n      },\n      {\n        \"subscription_name\": \"iFree卡（2016版）\",\n        \"subscription_amount\": 3.0\n      },\n      {\n        \"subscription_name\": \"国内通话费\",\n        \"subscription_amount\": 0.15\n      }\n    ]\n  }\n}"
-	jsonStr := "{\n  \"user_id\": 1,\n  \"balance\": 56.82,\n  \"timeStamp\": \"2024/06/25 19:12:31\",\n  \"consumption_condition\": {\n    \"consumption_amount\": 3.15,\n    \"consumption_set\": [\n      {\n        \"subscription_name\": \"20元包20G国内流量包\",\n        \"subscription_amount\": 0.0\n      },\n      {\n        \"subscription_name\": \"iFree卡（2016版）\",\n        \"subscription_amount\": 3.0\n      },\n      {\n        \"subscription_name\": \"国内通话费\",\n        \"subscription_amount\": 0.15\n      }\n    ]\n  }\n}"
-	JSONProcess([]byte(jsonStr), 1)
+	//jsonStr := "{\n  \"user_id\": 1,\n  \"balance\": 56.82,\n  \"timeStamp\": \"2024/06/25 19:12:31\",\n  \"consumption_condition\": {\n    \"consumption_amount\": 3.15,\n    \"consumption_set\": [\n      {\n        \"subscription_name\": \"20元包20G国内流量包\",\n        \"subscription_amount\": 0.0\n      },\n      {\n        \"subscription_name\": \"iFree卡（2016版）\",\n        \"subscription_amount\": 3.0\n      },\n      {\n        \"subscription_name\": \"国内通话费\",\n        \"subscription_amount\": 0.15\n      }\n    ]\n  }\n}"
+	//JSONProcess([]byte(jsonStr), 1)
 }
 
 func Spider(province string, userID uint, phoneNum string, pwd string) {
 	var targetFile string
 	if province == "山东" {
-		targetFile = "slide.py"
+		targetFile = "./utils/utils_spider/slide.py"
 	} else if province == "广东" {
-		targetFile = "slide_gd.py"
+		targetFile = "./utils/utils_spider/slide_gd.py"
 	}
 
 	// 一层传参
-	cmd := exec.Command("python", "execute.py", targetFile, strconv.Itoa(int(userID)), phoneNum, pwd)
+	cmd := exec.Command("python", "./utils/utils_spider/execute.py", targetFile, strconv.Itoa(int(userID)), phoneNum, pwd)
 	output, err := cmd.Output()
 	if err != nil {
 		fmt.Println("Error:", err)

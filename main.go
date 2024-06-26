@@ -5,7 +5,6 @@ import (
 	"AbnormalPhoneBillWarning/core"
 	"AbnormalPhoneBillWarning/global"
 	"AbnormalPhoneBillWarning/routers"
-	"AbnormalPhoneBillWarning/utils/utils_spider"
 	"log"
 )
 
@@ -14,19 +13,19 @@ func main() {
 	core.InitGorm()
 	core.InitRedis()
 
-	db, user := command.ParseCommand()
+	db, _ := command.ParseCommand()
 	if *db == true {
 		log.Println("正在初始化数据库表信息...")
 		command.MakeMigrations()
 		return
 	}
-	if *user == "admin" || *user == "user" {
-		log.Println("正在创建用户：", *user)
-		command.CreateUser(*user)
-		return
-	}
+	//if *user == "user" {
+	//	log.Println("正在创建用户：", *user)
+	//	command.CreateUser(*user)
+	//	return
+	//}
 
-	utils_spider.Ttt()
+	//utils_spider.TTT()
 
 	routers.InitRouter()
 	addr := global.Config.System.Addr()
