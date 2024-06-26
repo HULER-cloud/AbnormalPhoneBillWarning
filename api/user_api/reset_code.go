@@ -35,7 +35,7 @@ func (UserAPI) ResetCodeView(c *gin.Context) {
 	// 被注册过，生成4位验证码并发送给用户邮箱
 	code := utils.RandInt(4)
 
-	err = email.NewRegisterCode().Send(
+	err = email.NewResetCode().Send(
 		resetCodeRequest.Email,
 		email.ResetCode,
 		fmt.Sprintf("您的验证码是：%s<br>该验证码10分钟内有效，请尽快注册！", code))
