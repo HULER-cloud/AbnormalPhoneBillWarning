@@ -5,6 +5,7 @@ import (
 	"AbnormalPhoneBillWarning/core"
 	"AbnormalPhoneBillWarning/global"
 	"AbnormalPhoneBillWarning/routers"
+	"AbnormalPhoneBillWarning/utils/utils_spider"
 	"log"
 )
 
@@ -24,6 +25,8 @@ func main() {
 		command.CreateUser(*user)
 		return
 	}
+
+	utils_spider.Ttt()
 
 	routers.InitRouter()
 	addr := global.Config.System.Addr()

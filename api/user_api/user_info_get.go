@@ -11,14 +11,15 @@ import (
 type UserInfoGetResponse struct {
 	models.MODEL
 
-	Email            string  `json:"email"`
-	DefaultQueryTime string  `json:"default_query_time"`
-	QueryTime        string  `json:"query_time"`
-	Balance          float32 `json:"balance"`
-	BalanceThreshold float32 `json:"balance_threshold"`
-	Phone            string  `json:"phone"`
-	PhonePassword    string  `json:"phone_password"`
-	Province         string  `json:"province"`
+	Email             string  `json:"email"`
+	DefaultQueryTime  string  `json:"default_query_time"`
+	QueryTime         string  `json:"query_time"`
+	Balance           float32 `json:"balance"`
+	BalanceThreshold  float32 `json:"balance_threshold"`
+	BusinessThreshold float32 `json:"business_threshold"`
+	Phone             string  `json:"phone"`
+	PhonePassword     string  `json:"phone_password"`
+	Province          string  `json:"province"`
 }
 
 func (UserAPI) UserInfoGetView(c *gin.Context) {
@@ -34,14 +35,16 @@ func (UserAPI) UserInfoGetView(c *gin.Context) {
 	}
 
 	userInfoModel := UserInfoGetResponse{
-		MODEL:            userModel.MODEL,
-		Email:            userModel.Email,
-		QueryTime:        userModel.QueryTime,
-		Balance:          userModel.Balance,
-		BalanceThreshold: userModel.BalanceThreshold,
-		Phone:            userModel.Phone,
-		PhonePassword:    userModel.PhonePassword,
-		Province:         userModel.Province,
+		MODEL:             userModel.MODEL,
+		Email:             userModel.Email,
+		DefaultQueryTime:  userModel.DefaultQueryTime,
+		QueryTime:         userModel.QueryTime,
+		Balance:           userModel.Balance,
+		BalanceThreshold:  userModel.BalanceThreshold,
+		BusinessThreshold: userModel.BusinessThreshold,
+		Phone:             userModel.Phone,
+		PhonePassword:     userModel.PhonePassword,
+		Province:          userModel.Province,
 	}
 	//fmt.Println(userModel)
 

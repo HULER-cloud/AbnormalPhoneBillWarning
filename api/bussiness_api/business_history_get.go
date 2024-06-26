@@ -7,13 +7,12 @@ import (
 	"AbnormalPhoneBillWarning/routers/response"
 	"AbnormalPhoneBillWarning/utils"
 	"github.com/gin-gonic/gin"
-	"time"
 )
 
 type BusinessHistory struct {
-	QueryDate    time.Time `json:"query_date"`
-	BusinessName string    `json:"business_name"`
-	Spending     float32   `json:"spending"`
+	QueryDate    string  `json:"query_date"`
+	BusinessName string  `json:"business_name"`
+	Spending     float32 `json:"spending"`
 }
 
 func (BusinessAPI) BusinessHistoryGetView(c *gin.Context) {

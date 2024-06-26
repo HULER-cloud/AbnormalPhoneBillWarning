@@ -11,12 +11,13 @@ import (
 )
 
 type UserCreateRequest struct {
-	Phone            string
-	Password         string
-	Email            string
-	QueryTime        string
-	Balance          float32
-	BalanceThreshold float32
+	Phone             string
+	Password          string
+	Email             string
+	QueryTime         string
+	Balance           float32
+	BalanceThreshold  float32
+	BusinessThreshold float32
 }
 
 func (UserAPI) UserCreateView(c *gin.Context) {
@@ -41,12 +42,13 @@ func (UserAPI) UserCreateView(c *gin.Context) {
 	hashPwd := utils.HashPwd(userCreateRequest.Password)
 	//fmt.Printf(hashPwd)
 	err = global.DB.Create(&models.UserModel{
-		MODEL:            models.MODEL{},
-		Password:         hashPwd,
-		Email:            userCreateRequest.Email,
-		QueryTime:        userCreateRequest.QueryTime,
-		Balance:          userCreateRequest.Balance,
-		BalanceThreshold: userCreateRequest.BalanceThreshold,
+		MODEL:             models.MODEL{},
+		Password:          hashPwd,
+		Email:             userCreateRequest.Email,
+		QueryTime:         userCreateRequest.QueryTime,
+		Balance:           userCreateRequest.Balance,
+		BalanceThreshold:  userCreateRequest.BalanceThreshold,
+		BusinessThreshold: userCreateRequest.BusinessThreshold,
 	}).Error
 	//fmt.Println(123)
 	if err != nil {

@@ -10,12 +10,13 @@ import (
 )
 
 type UserInfoUpdateRequest struct {
-	DefaultQueryTime string  `json:"default_query_time"`
-	QueryTime        string  `json:"query_time"`
-	BalanceThreshold float32 `json:"balance_threshold"`
-	Phone            string  `json:"phone"`
-	PhonePassword    string  `json:"phone_password"`
-	Province         string  `json:"province"`
+	DefaultQueryTime  string  `json:"default_query_time"`
+	QueryTime         string  `json:"query_time"`
+	BalanceThreshold  float32 `json:"balance_threshold"`
+	BusinessThreshold float32 `json:"business_threshold"`
+	Phone             string  `json:"phone"`
+	PhonePassword     string  `json:"phone_password"`
+	Province          string  `json:"province"`
 }
 
 func (UserAPI) UserInfoUpdateView(c *gin.Context) {
@@ -42,10 +43,10 @@ func (UserAPI) UserInfoUpdateView(c *gin.Context) {
 
 	// 更新信息入库
 	err = global.DB.Model(&userModel).Updates(map[string]any{
-
 		"default_query_time": userInfoUpdateRequest.DefaultQueryTime,
 		"query_time":         userInfoUpdateRequest.QueryTime,
 		"balance_threshold":  userInfoUpdateRequest.BalanceThreshold,
+		"business_threshold": userInfoUpdateRequest.BusinessThreshold,
 		"phone":              userInfoUpdateRequest.Phone,
 		"phone_password":     userInfoUpdateRequest.PhonePassword,
 		"province":           userInfoUpdateRequest.Province,

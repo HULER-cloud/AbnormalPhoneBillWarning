@@ -49,7 +49,13 @@ func (BusinessAPI) BusinessInfoGetView(c *gin.Context) {
 			Spending:     userBusiness.Spending,
 			QueryDate:    userBusiness.UpdatedAt,
 		}
-		returnList = append(returnList, resp)
+		// 只有新查询的才加进去
+		// 因为会自动执行爬虫脚本来查询，所以不用担心查到过早的数据
+		// 当然一定的延迟是不可避免的
+		if time.Now().Sub(resp.QueryDate).Hours() < float64(36) {
+			returnList = append(returnList, resp)
+		}
+		//returnList = append(returnList, resp)
 	}
 
 	response.OKWithList(count, returnList, c)
