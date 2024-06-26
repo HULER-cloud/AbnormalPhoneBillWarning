@@ -1,14 +1,16 @@
 import subprocess
 import sys
 
-targetFile=sys.argv[1]
-phoneNum=sys.argv[2]
-pwd=sys.argv[3]
+userID = sys.argv[1]
+targetFile = sys.argv[2]
+phoneNum = sys.argv[3]
+pwd = sys.argv[4]
 
 while True:
     try:
         # 执行slide.py文件
-        process = subprocess.Popen(['python', targetFile,phoneNum,pwd])
+        # print(userID,targetFile,phoneNum,pwd)
+        process = subprocess.Popen(['python',targetFile, userID, phoneNum, pwd])
         process.wait()  # 等待slide.py执行完成
 
         return_code = process.returncode

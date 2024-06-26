@@ -1,4 +1,4 @@
-package utils_spider
+package main
 
 import (
 	"AbnormalPhoneBillWarning/global"
@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"strconv"
 )
 
 type SpiderInfo struct {
+	UserID               uint                 `json:"user_id"`
 	Balance              float32              `json:"balance"`
 	TimeStamp            string               `json:"timeStamp"`
 	ConsumptionCondition ConsumptionCondition `json:"consumption_condition"`
@@ -25,10 +27,10 @@ type Subscription struct {
 	SubscriptionAmount float32 `json:"subscription_amount"`
 }
 
-func Ttt() {
-	//Spider(1, "山东", "17353825020", "153231")
-	jsonStr := "{\n  \"balance\": 56.82,\n  \"timeStamp\": \"2024/06/25 19:12:31\",\n  \"consumption_condition\": {\n    \"consumption_amount\": 3.15,\n    \"consumption_set\": [\n      {\n        \"subscription_name\": \"20元包20G国内流量包\",\n        \"subscription_amount\": 0.0\n      },\n      {\n        \"subscription_name\": \"iFree卡（2016版）\",\n        \"subscription_amount\": 3.0\n      },\n      {\n        \"subscription_name\": \"国内通话费\",\n        \"subscription_amount\": 0.15\n      }\n    ]\n  }\n}"
-	JSONProcess([]byte(jsonStr), 1)
+func main() {
+	Spider(1, "山东", "17353825020", "153231")
+	//jsonStr := "{\n  \"balance\": 56.82,\n  \"timeStamp\": \"2024/06/25 19:12:31\",\n  \"consumption_condition\": {\n    \"consumption_amount\": 3.15,\n    \"consumption_set\": [\n      {\n        \"subscription_name\": \"20元包20G国内流量包\",\n        \"subscription_amount\": 0.0\n      },\n      {\n        \"subscription_name\": \"iFree卡（2016版）\",\n        \"subscription_amount\": 3.0\n      },\n      {\n        \"subscription_name\": \"国内通话费\",\n        \"subscription_amount\": 0.15\n      }\n    ]\n  }\n}"
+	//JSONProcess([]byte(jsonStr), 1)
 }
 
 func testfun(phoneNum string, pwd string) {
@@ -53,7 +55,7 @@ func Spider(userID uint, province string, phoneNum string, pwd string) {
 	}
 
 	// 一层传参
-	cmd := exec.Command("python", "execute.py", targetFile, phoneNum, pwd)
+	cmd := exec.Command("python", "execute.py", strconv.Itoa(int(userID)), targetFile, phoneNum, pwd)
 	output, err := cmd.Output()
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -63,7 +65,7 @@ func Spider(userID uint, province string, phoneNum string, pwd string) {
 	// 打印爬取结果
 	fmt.Println(string(output))
 
-	JSONProcess(output, userID)
+	//JSONProcess(output, userID)
 
 }
 

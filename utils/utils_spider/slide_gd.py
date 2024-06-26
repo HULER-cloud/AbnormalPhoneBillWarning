@@ -20,8 +20,9 @@ url = 'https://gd.189.cn/common/newLogin.html'
 # 登录的账号和密码
 # username = "19047188667"  # 广东号码
 # password = "109238"
-username=sys.argv[1]
-password=sys.argv[2]
+userID=sys.argv[1]
+username=sys.argv[2]
+password=sys.argv[3]
 # low_threshold = 10  # 低阈值为10元
 # high_threshold = 500  # 高阈值为500元
 
@@ -248,6 +249,7 @@ def txt2json(input_file):
 
     timestamp = datetime.now().strftime("%Y/%m/%d %H:%M:%S")  # 获取当前时间戳
     # 构造 JSON 数据
+    data["user_id"] = userID
     data["balance"] = float(balance)
     data["timeStamp"] = timestamp
     data["consumption_condition"] = {
