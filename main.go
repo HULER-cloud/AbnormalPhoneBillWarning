@@ -5,7 +5,9 @@ import (
 	"AbnormalPhoneBillWarning/command"
 	"AbnormalPhoneBillWarning/core"
 	"AbnormalPhoneBillWarning/global"
+	"AbnormalPhoneBillWarning/internal/app"
 	"AbnormalPhoneBillWarning/routers"
+	"context"
 	"log"
 )
 
@@ -20,15 +22,11 @@ func main() {
 		command.MakeMigrations()
 		return
 	}
-	//if *user == "user" {
-	//	log.Println("正在创建用户：", *user)
-	//	command.CreateUser(*user)
-	//	return
-	//}
 
 	//utils_spider.TTT()
 	//go app.InitTimeTable()
 	//go app.UpdateDefaultAccessTimer(utils_spider.Spider)
+	app.InitDBandTable(context.Background(), global.Redis, global.DB)
 	go dataanalysis.DataAnalysis()
 
 	routers.InitRouter()
@@ -38,14 +36,5 @@ func main() {
 	if err != nil {
 		log.Fatal("服务器启动失败！")
 	}
-
-	// 接收邮件的内容暂时没想好该塞在哪，先mark一下
-
-	//// 获取到邮箱模块的基础信息（包括发送和接收）
-	//Cfg = InitConf()
-	//fmt.Printf("%v", Cfg)
-	//
-	//// 然后启动接收邮件的任务，这块在启动后应当是一直运行的
-	//email.Recv(Cfg)
 
 }

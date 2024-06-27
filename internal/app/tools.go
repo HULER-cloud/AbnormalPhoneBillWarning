@@ -13,13 +13,13 @@ func parseTime(value string) time.Time {
 }
 
 // 辅助函数：解析浮点数
-func parseFloat(value string) float64 {
-	parsedFloat, _ := strconv.ParseFloat(value, 64)
-	return parsedFloat
+func parseFloat(value string) float32 {
+	parsedFloat, _ := strconv.ParseFloat(value, 32)
+	return float32(parsedFloat)
 }
 
 // 辅助函数：字符串转整数
-func atoi(value string) int {
+func atoi(value string) uint {
 	parsedInt, _ := strconv.Atoi(value)
-	return parsedInt
+	return uint(parsedInt)
 }

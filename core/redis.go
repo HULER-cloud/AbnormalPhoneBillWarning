@@ -4,7 +4,7 @@ import (
 	"AbnormalPhoneBillWarning/global"
 	"context"
 	"fmt"
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 	"log"
 	"time"
 )
@@ -21,7 +21,7 @@ func InitRedis() {
 	})
 	_, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	res, err := rdb.Ping().Result()
+	res, err := rdb.Ping(context.Background()).Result()
 	fmt.Println(res)
 	if err != nil {
 		log.Fatalf("redis[%s]连接失败！", redisCfg.Addr())

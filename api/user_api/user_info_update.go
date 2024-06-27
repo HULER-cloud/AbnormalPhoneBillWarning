@@ -29,7 +29,7 @@ func (UserAPI) UserInfoUpdateView(c *gin.Context) {
 		response.FailedWithDetails(response.ArgumentsError, c)
 		return
 	}
-
+	//fmt.Printf("%+v", userInfoUpdateRequest)
 	// 尝试获取目标用户信息
 	var userModel models.UserModel
 	count := global.DB.Where("id = ?", claims.UserID).

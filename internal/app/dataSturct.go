@@ -1,103 +1,56 @@
 package app
 
 import (
-	"encoding/json"
 	"time"
 )
 
-// JSON_Format 接口定义
-type JSON_Format interface {
-	JSON_Marshal() ([]byte, error)
+type MODEL struct {
+	ID        uint      `gorm:"primaryKey" json:"id" redis:"id"`
+	CreatedAt time.Time `json:"created_at" redis:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" redis:"updated_at"`
 }
 
-// UserFromDB 代表用户数据的结构体
-type UserFromDB struct {
-	UserID               int       `redis:"user_id" json:"user_id" gorm:"column:user_id;primaryKey;autoIncrement"`
-	UserPassword         string    `redis:"user_password" json:"user_password" gorm:"column:user_password;not null"`
-	UserEmail            string    `redis:"user_email" json:"user_email" gorm:"column:user_email;unique;not null"`
-	UseDefaultQueryTime  bool      `redis:"use_default_query_time" json:"use_default_query_time" gorm:"column:use_default_query_time;not null"`
-	UserQueryTime        time.Time `redis:"user_query_time" json:"user_query_time" gorm:"column:user_query_time"`
-	UserBalance          float64   `redis:"user_balance" json:"user_balance" gorm:"column:user_balance"`
-	UserBalanceThreshold float64   `redis:"user_balance_threshold" json:"user_balance_threshold" gorm:"column:user_balance_threshold"`
-	UserProvince         string    `redis:"user_province" json:"user_province" gorm:"column:user_province"`
-	UserPhoneNumber      string    `redis:"user_phone_number" json:"user_phone_number" gorm:"column:phone;not null"`
-	UserPhonePassword    string    `redis:"user_phone_password" json:"user_phone_password" gorm:"column:user_phone_password;not null"`
+type UserModel struct {
+	MODEL    `json:"model"`
+	Email    string `json:"email"`    // 用户账号（邮箱）
+	Password string `json:"password"` // 用户密码
+
+	DefaultQueryTime  string  `json:"default_query_time"`
+	QueryTime         string  `json:"query_time"`         // 用户每日的查询时间
+	Balance           float32 `json:"balance"`            // 用户当前余额
+	BalanceThreshold  float32 `json:"balance_threshold"`  // 用户余额阈值
+	BusinessThreshold float32 `json:"business_threshold"` // 用户业务阈值
+
+	Phone         string `json:"phone"`          // 用户手机号
+	PhonePassword string `json:"phone_password"` // 登运营商用的密码
+	Province      string `json:"province"`       // 省份
+
+	BusinessModels []BusinessModel `gorm:"many2many:user_business_models"` // 用于多对多关系表
 }
 
-func (UserFromDB) TableName() string {
-	return "users"
+type BusinessModel struct {
+	MODEL
+	BusinessName string      `json:"business_name"`                  // 业务名称
+	UserModels   []UserModel `gorm:"many2many:user_business_models"` // 用于多对多关系表
 }
 
-func (u UserFromDB) JSON_Marshal() ([]byte, error) {
-	return json.Marshal(u)
+type UserBusinessModel struct {
+	MODEL  `json:"model"`
+	UserID uint `json:"user_id"`
+	//UserModel     UserModel     `gorm:"foreignKey:UserID" json:"user_model"`
+	BusinessID uint `json:"business_id"`
+	//BusinessModel BusinessModel `gorm:"foreignKey:businessID" json:"business_model"`
+	Spending float32 `json:"spending"` // 用户在该项业务上的花费
+	//Phone    string  `json:"phone"`    // 用户手机号
 }
 
-func (u UserFromDB) MarshalJSON() ([]byte, error) {
-	type Alias UserFromDB // 别名
+type UserBusinessHistoryModel struct {
+	MODEL  `json:"model"`
+	UserID uint `json:"user_id"`
+	//UserModel     UserModel     `gorm:"foreignKey:UserID" json:"user_model"`
+	BusinessID uint `json:"business_id"`
+	//BusinessModel BusinessModel `gorm:"foreignKey:businessID" json:"business_model"`
+	Spending  float32 `json:"spending"`
+	QueryDate string  `json:"query_date"` // 查询日期
 
-	// 格式化 UserQueryTime 仅保留时间部分
-	formattedTime := u.UserQueryTime.Format("15:04:05")
-
-	return json.Marshal(&struct {
-		Alias
-		UserQueryTime string `json:"user_query_time"`
-	}{
-		Alias:         (Alias)(u),
-		UserQueryTime: formattedTime,
-	})
-}
-
-type BusinessFromDB struct {
-	BusinessID   int    `redis:"id" json:"id" gorm:"column:business_id;primaryKey;autoIncrement"`
-	BusinessName string `redis:"name" json:"name" gorm:"column:business_name;type:varchar(255);not null"`
-}
-
-func (BusinessFromDB) TableName() string {
-	return "businesses"
-}
-
-func (b BusinessFromDB) JSON_Marshal() ([]byte, error) {
-	return json.Marshal(b)
-}
-
-type UserBusinessFromDB struct {
-	UserID     int     `redis:"user_id" json:"user_id" gorm:"column:user_id;primaryKey" `
-	BusinessID int     `redis:"business_id" json:"business_id" gorm:"column:business_id;primaryKey" `
-	Spending   float64 `redis:"spending" json:"spending" gorm:"column:spending" `
-}
-
-func (ub UserBusinessFromDB) TableName() string {
-	return "user_businesses"
-}
-
-func (ub UserBusinessFromDB) JSON_Marshal() ([]byte, error) {
-	return json.Marshal(ub)
-}
-
-type UserBusinessHistory struct {
-	ub       UserBusinessFromDB
-	Spending float64 `json:"spending" gorm:"column:spending"`
-}
-
-func (h UserBusinessHistory) TableName() string {
-	return "user_business_history"
-}
-
-func (h UserBusinessHistory) JSON_Marshal() ([]byte, error) {
-	return json.Marshal(h)
-}
-
-func (h UserBusinessHistory) MarshalJSON() ([]byte, error) {
-	type Alias UserBusinessHistory // 别名
-
-	// 格式化 QueryDate 仅保留日期部分
-	formattedTime := h.QueryDate.Format("2006-01-02")
-
-	return json.Marshal(&struct {
-		Alias
-		QueryDate string `json:"user_query_time"`
-	}{
-		Alias:     (Alias)(h),
-		QueryDate: formattedTime,
-	})
 }

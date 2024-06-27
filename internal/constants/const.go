@@ -12,3 +12,5 @@ const QueryInterval = 30 * time.Minute
 const QueryTime = 0 * time.Second
 
 const UpdateTimeTableInterval = 24 * time.Hour
+
+const DefaultExpireInterval = 1 * UpdateTimeTableInterval

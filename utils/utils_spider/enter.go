@@ -8,6 +8,7 @@ import (
 	"log"
 	"os/exec"
 	"strconv"
+	"time"
 )
 
 type SpiderInfo struct {
@@ -18,8 +19,22 @@ type SpiderInfo struct {
 }
 
 type ConsumptionCondition struct {
-	ConsumptionAmount float32        `json:"consumption_amount"`
-	ConsumptionSet    []Subscription `json:"consumption_set"`
+	ConsumptionAmount float32          `json:"consumption_amount"`
+	ConsumptionSet    SubscriptionList `json:"consumption_set"`
+}
+
+type SubscriptionList []Subscription
+
+func (s SubscriptionList) Len() int {
+	return len(s)
+}
+
+func (s SubscriptionList) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+func (s SubscriptionList) Less(i, j int) bool {
+	return s[i].SubscriptionAmount > s[j].SubscriptionAmount
 }
 
 type Subscription struct {
@@ -65,18 +80,18 @@ func JSONProcess(output []byte, userID uint) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(spiderInfo)
+	//fmt.Println(spiderInfo)
 
 	// 更新用户的余额
 	// 尝试获取目标用户信息
-	fmt.Println(123)
+	//fmt.Println(123)
 	var userModel models.UserModel
 	count := global.DB.Where("id = ?", userID).
 		Take(&userModel).RowsAffected
 	if count == 0 {
 		return
 	}
-	fmt.Println(456)
+	//fmt.Println(456)
 
 	// 更新信息入库
 	err = global.DB.Model(&userModel).Updates(map[string]any{
@@ -122,9 +137,10 @@ func JSONProcess(output []byte, userID uint) {
 		// 更新用户的当前业务
 		var userBusinessModel models.UserBusinessModel
 		count = global.DB.Where("user_id = ? and business_id = ?", userID, businessModel.ID).
-			Take(&businessModel).RowsAffected
+			Take(&userBusinessModel).RowsAffected
 		// 没有的业务新增
 		if count == 0 {
+			//fmt.Println("新增", userID, businessModel.ID)
 			err = global.DB.Create(&models.UserBusinessModel{
 				MODEL:      models.MODEL{},
 				UserID:     userID,
@@ -132,6 +148,7 @@ func JSONProcess(output []byte, userID uint) {
 				Spending:   v.SubscriptionAmount,
 			}).Error
 		} else {
+			//fmt.Println("更新", userID, businessModel.ID)
 			// 有的业务更新
 			err = global.DB.Model(&userBusinessModel).Updates(map[string]any{
 				"user_id":     userID,
@@ -140,5 +157,15 @@ func JSONProcess(output []byte, userID uint) {
 			}).Error
 		}
 
+	}
+
+	// 最后删除过期的数据
+	// 计算五秒钟前的时间
+	fiveSecondsAgo := time.Now().Add(-5 * time.Second)
+	// 删去过早的业务，太早的业务说明不是在本次查询中爬到的
+	err = global.DB.Where("user_id = ? and updated_at < ?", userID, fiveSecondsAgo).Delete(&models.UserBusinessModel{}).Error
+	if err != nil {
+		log.Println(err)
+		return
 	}
 }

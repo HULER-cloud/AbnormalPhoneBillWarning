@@ -2,12 +2,13 @@ package app
 
 import (
 	"AbnormalPhoneBillWarning/internal/constants"
+	"AbnormalPhoneBillWarning/utils/utils_spider"
 	"container/heap"
 	"context"
 	"fmt"
-	"github.com/go-redis/redis/v8"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	"gorm.io/gorm"
 )
 
@@ -42,26 +43,37 @@ func (h *MinHeap) Pop() interface{} {
 	return x
 }
 
+func InitDBandTable(ctx context.Context, rdb *redis.Client, db *gorm.DB) {
+	// 新建时间表
+	att := NewTimeTable()
+	// 初始化时间表
+	go att.initTimeTable(ctx, rdb, db)
+	go UpdateDefaultAccessTimer(ctx, rdb, db, att.initTimeTable)
+
+	go QueryDatabaseTimer(ctx, rdb, db, utils_spider.Spider)
+
+}
+
 // 相当于构造函数，返回的是指针
-func NewTimeTable(ctx context.Context, rdb *redis.Client, db *gorm.DB) *accessTimeTable {
+func NewTimeTable() *accessTimeTable {
 	att := accessTimeTable{}
 	// 计算每个时间段的长度（以分钟为单位）
 	att.segmentLength = int(constants.QueryInterval.Minutes())
 	att.tableSize = 24 * 60 / att.segmentLength
-	att.InitTimeTable(ctx, rdb, db)
 	return &att
 }
 
 /*
 除了用在进程开始时初始化以外，还同时用于动态重分配默认时间
 */
-func (attSelf *accessTimeTable) InitTimeTable(ctx context.Context, rdb *redis.Client, db *gorm.DB) {
+func (attSelf *accessTimeTable) initTimeTable(ctx context.Context, rdb *redis.Client, db *gorm.DB) {
 
 	// 查询数据库，并记录每个时间段的人数
 	startTime := time.Date(1, 1, 1, 0, 0, 0, 0, time.Local)
 	endTime := startTime.Add(constants.QueryInterval)
 	for i := 0; i < attSelf.tableSize; i++ {
 		results, _ := GetUsersWithTimeBetween(ctx, rdb, startTime, endTime)
+		fmt.Println(i, results)
 		attSelf.timeTable = append(attSelf.timeTable, len(results))
 
 		// 迭代计算下一个时间段
@@ -70,12 +82,12 @@ func (attSelf *accessTimeTable) InitTimeTable(ctx context.Context, rdb *redis.Cl
 	}
 
 	// 通过时间表初始化（重初始化）小顶堆，并相应地分配默认访问时间
-	attSelf.InitTableHeap()
-	attSelf.AllocateDefaultAccessTime(ctx, rdb, db)
+	attSelf.initTableHeap()
+	attSelf.allocateDefaultAccessTime(ctx, rdb, db)
 
 }
 
-func (attSelf *accessTimeTable) InitTableHeap() {
+func (attSelf *accessTimeTable) initTableHeap() {
 	minHeap := &MinHeap{}
 	for i := range attSelf.timeTable {
 		heap.Push(minHeap, IndexValue{i, attSelf.timeTable[i]})
@@ -83,10 +95,11 @@ func (attSelf *accessTimeTable) InitTableHeap() {
 	attSelf.tableHeap = *minHeap
 }
 
-func (attSelf *accessTimeTable) AllocateDefaultAccessTime(ctx context.Context, rdb *redis.Client, db *gorm.DB) {
+func (attSelf *accessTimeTable) allocateDefaultAccessTime(ctx context.Context, rdb *redis.Client, db *gorm.DB) {
 
 	// 获取所有选择默认访问的用户，分配访问时间，随后更新数据库和时间表
 	userIDs, _ := GetUsersWithDefaultAccess(ctx, db)
+	//fmt.Println(userIDs)
 
 	minHeap := &attSelf.tableHeap
 	for _, id := range userIDs {
@@ -96,7 +109,7 @@ func (attSelf *accessTimeTable) AllocateDefaultAccessTime(ctx context.Context, r
 		heap.Push(minHeap, minIndex)
 
 		// 写数据库,更新时间表
-		minIndexTime := attSelf.ParseIndexToTime(minIndex.Index)
+		minIndexTime := attSelf.parseIndexToTime(minIndex.Index)
 		SetNewUser(rdb, id, minIndexTime)
 
 	}
@@ -119,7 +132,7 @@ func SetNewUser(rdb *redis.Client, userID int, accessTime time.Time) error {
 }
 
 // getTableIndexWithTime返回给定时间所在时间段在时间表中对应index,输入值忽略年月日
-func (attSelf *accessTimeTable) GetTableIndexWithTime(t time.Time) int {
+func (attSelf *accessTimeTable) getTableIndexWithTime(t time.Time) int {
 
 	// 计算给定时间的小时数和分钟数
 	hour := t.Hour()
@@ -135,7 +148,7 @@ func (attSelf *accessTimeTable) GetTableIndexWithTime(t time.Time) int {
 	return segmentIndex
 }
 
-func (attSelf *accessTimeTable) ParseIndexToTime(index int) time.Time {
+func (attSelf *accessTimeTable) parseIndexToTime(index int) time.Time {
 
 	// 计算偏移量（以小时为单位）
 	offset := time.Duration(index * attSelf.segmentLength)
@@ -155,9 +168,9 @@ func (attSelf *accessTimeTable) ParseIndexToTime(index int) time.Time {
 参数：一个time.Time对象
 */
 func (attSelf *accessTimeTable) UpdateTimeTableForSingleUser(t time.Time) {
-	attSelf.PrintTimeTable()
-	attSelf.timeTable[attSelf.GetTableIndexWithTime(t)] += 1
-	attSelf.PrintTimeTable()
+	attSelf.printTimeTable()
+	attSelf.timeTable[attSelf.getTableIndexWithTime(t)] += 1
+	attSelf.printTimeTable()
 }
 
 /*
@@ -166,7 +179,7 @@ func (attSelf *accessTimeTable) UpdateTimeTableForSingleUser(t time.Time) {
 返回值：错误
 现在是其实是把默认时间用户注册的大半流程给塞这了，说是分配时间但其实写数据库也在里面，但是为单个用户分配时间的函数又好像没啥别的地方能用上，就先这样吧
 */
-func (attSelf *accessTimeTable) AllocateSingleAccessTime(userID int, rdb *redis.Client) error {
+func (attSelf *accessTimeTable) allocateSingleAccessTime(userID int, rdb *redis.Client) error {
 
 	// 生成一个最佳访问时间，遍历找最小值
 	min := attSelf.timeTable[0]
@@ -190,7 +203,7 @@ func (attSelf *accessTimeTable) AllocateSingleAccessTime(userID int, rdb *redis.
 }
 
 // 测试用函数，打印时间表内容
-func (attSelf *accessTimeTable) PrintTimeTable() {
+func (attSelf *accessTimeTable) printTimeTable() {
 	startTime := time.Date(1, 1, 1, 0, 0, 0, 0, time.Local)
 	endTime := startTime.Add(constants.QueryInterval)
 	for i := 0; i < attSelf.tableSize; i++ {

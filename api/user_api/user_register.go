@@ -59,10 +59,12 @@ func (UserAPI) UserRegisterView(c *gin.Context) {
 	hashPwd := utils.HashPwd(userRegisterRequest.Password)
 	//fmt.Printf(hashPwd)
 	err = global.DB.Create(&models.UserModel{
-		MODEL:            models.MODEL{},
-		Email:            userRegisterRequest.Email,
-		Password:         hashPwd,
-		DefaultQueryTime: "是",
+		MODEL:             models.MODEL{},
+		Email:             userRegisterRequest.Email,
+		Password:          hashPwd,
+		DefaultQueryTime:  "是",
+		BalanceThreshold:  0,
+		BusinessThreshold: 10000,
 	}).Error
 
 	if err != nil {

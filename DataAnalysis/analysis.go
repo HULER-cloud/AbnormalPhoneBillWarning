@@ -2,10 +2,12 @@ package dataanalysis
 
 import (
 	"AbnormalPhoneBillWarning/DataAnalysis/RabbitMQ"
-	"AbnormalPhoneBillWarning/email"
+	"AbnormalPhoneBillWarning/abnormal_task"
 	"AbnormalPhoneBillWarning/global"
 	"AbnormalPhoneBillWarning/models"
+	"AbnormalPhoneBillWarning/utils/utils_spider"
 	"encoding/json"
+	"fmt"
 	"log"
 	"sort"
 
@@ -19,23 +21,22 @@ DataAnalysis负责处理爬虫进程返回的json结果，对其中的余额和�
 来自爬虫进程的json格式数据，通过mq进行传递，格式如下：
 
 	{
-	  "id": int
+	  "user_id": int
 	  "balance": float32, //余额
 	  "timeStamp": "年月日 时分秒",
-	  "consumption_conditon":
+	  "consumption_condition":
 	  [
 	    "consumption_amount": float32,
-	    "consumption_arr":
+	    "consumption_set":
 	    [
-	        "consumption_1": {
-	          "consumption_name": "业务名称",
-	          "consumption_amount": float32
+	        {
+	          "subscription_name": "业务名称",
+	          "subscription_amount": float32
 	        },
-	        "consumption_2": {
-	          "consumption_name": "业务名称2",
-	          "consumption_amount": float32
+	        {
+	          "subscription_name": "业务名称2",
+	          "subscription_amount": float32
 	        },
-	        "consumption_3": ...
 	    ]
 	  ]
 	}
@@ -50,12 +51,13 @@ DataAnalysis负责处理爬虫进程返回的json结果，对其中的余额和�
 
 	{
 		"id":int
-	    "missionId":0 or 1 or 2, //missionID的值为0或1，代表是余额异常还是消费异常
+	    "missionId":0 or 1, //missionID的值为0或1，代表是余额异常还是消费异常
 
 	    "mission":
 	    {
 	        "timeStamp":"年月日 时分秒",
 	        "balance":float32,
+			"cost":float32,
 	        "abnormal_consumption" :[
 				{
 					"consumption_name": "业务名称",
@@ -81,52 +83,52 @@ DataAnalysis负责处理爬虫进程返回的json结果，对其中的余额和�
 
 // 爬虫返回结构体
 type PythonCrawlerResult struct {
-	Id                   int                  `json:"id"`
+	UserID               int                  `json:"user_id"`
 	Balance              float32              `json:"balance"`
 	TimeStamp            string               `json:"timeStamp"`
-	ComsumptionCondition ComsumptionCondition `json:"consumption_conditon"`
+	ConsumptionCondition ConsumptionCondition `json:"consumption_condition"`
 }
 
-type ComsumptionCondition struct {
-	ComsumptionAmount float32         `json:"consumption_amount"`
-	ComsumptionArr    ComsumptionList `json:"consumption_set"`
+type ConsumptionCondition struct {
+	ConsumptionAmount float32         `json:"consumption_amount"`
+	ConsumptionArr    ConsumptionList `json:"consumption_set"`
 }
 
-type ComsumptionList []Comsumption
+type ConsumptionList []Consumption
 
-type Comsumption struct {
+type Consumption struct {
 	SubscriptionName   string  `json:"subscription_name"`
 	SubscriptionAmount float32 `json:"subscription_amount"`
 }
 
-// 异常任务结构体
-type AbnormalMission struct {
-	Id        int     `json:"id"`
-	MissionID int     `json:"missionID"`
-	Mission   Mission `json:"mission"`
-}
+// 异常任务结构体，用了abnormal_task.Task
+//type AbnormalMission struct {
+//	UserID    int     `json:"user_id"`
+//	MissionID int     `json:"missionID"`
+//	Mission   Mission `json:"mission"`
+//}
+//
+//type Mission struct {
+//	TimeStamp           string                `json:"timeStamp"`
+//	Balance             float32               `json:"balance"`
+//	Cost                float32               `json:"cost"`
+//	AbnormalConsumption []AbnormalConsumption `json:"abnormal_consumption"`
+//}
+//
+//type AbnormalConsumption struct {
+//	ConsumptionName   string  `json:"consumption_name"`
+//	ConsumptionAmount float32 `json:"consumption_amount"`
+//}
 
-type Mission struct {
-	TimeStamp           string                `json:"timeStamp"`
-	Balance             float32               `json:"balance"`
-	Cost                float32               `json:"cost"`
-	AbnormalConsumption []AbnormalConsumption `json:"abnormal_consumption"`
-}
-
-type AbnormalConsumption struct {
-	ConsumptionName   string  `json:"consumption_name"`
-	ConsumptionAmount float32 `json:"consumption_amount"`
-}
-
-func (c ComsumptionList) Len() int {
+func (c ConsumptionList) Len() int {
 	return len(c)
 }
 
-func (c ComsumptionList) Swap(i, j int) {
+func (c ConsumptionList) Swap(i, j int) {
 	c[i], c[j] = c[j], c[i]
 }
 
-func (c ComsumptionList) Less(i, j int) bool {
+func (c ConsumptionList) Less(i, j int) bool {
 	return c[i].SubscriptionAmount > c[j].SubscriptionAmount
 }
 
@@ -141,26 +143,28 @@ func DataAnalysis() {
 	map_publish_RabbitMQ["AbnormalMission"] = mq_publish
 	var list_publish_name []string
 	list_publish_name = append(list_publish_name, "AbnormalMission")
-	//fmt.Println("运行到这里了")
 
-	//fmt.Println(123)
 	mq_consumer.Consume_Work(map_publish_RabbitMQ, list_publish_name, handler_DataAnalysis)
 
 }
 
 func handler_DataAnalysis(delivery amqp.Delivery, map_pub map[string]*RabbitMQ.RabbitMQ, pub_name []string) error {
-	//读取脚本结果
-	var task PythonCrawlerResult
+	// 读取脚本结果
+	var task utils_spider.SpiderInfo
 	err := json.Unmarshal(delivery.Body, &task)
 	if err != nil {
 		log.Fatalf("Error decoding json: %s", err)
 		return err
 	}
 
+	// 根据脚本更新数据库
+	go utils_spider.JSONProcess(delivery.Body, task.UserID)
+	//fmt.Println(string(delivery.Body))
+	//fmt.Println(task)
 	/* 使用id查表，得到预设的余额阈值和业务消费阈值 */
 	/* 查邮箱，创建协程发送 */
 	var userModel models.UserModel
-	err = global.DB.Where("id = ?", task.Id).Take(&userModel).Error
+	err = global.DB.Where("id = ?", task.UserID).Take(&userModel).Error
 	if err != nil {
 		log.Println(err)
 		return err
@@ -170,13 +174,16 @@ func handler_DataAnalysis(delivery amqp.Delivery, map_pub map[string]*RabbitMQ.R
 	var consumptionLimit float32 = userModel.BusinessThreshold
 	var emailAddress string = userModel.Email
 
-	comsumptionList := task.ComsumptionCondition.ComsumptionArr
-	sort.Sort(comsumptionList)
+	//fmt.Println(balanceLimit, consumptionLimit, emailAddress)
+
+	consumptionList := task.ConsumptionCondition.ConsumptionSet
+	sort.Sort(consumptionList)
 
 	//余额过低报警
 	if balance := task.Balance; balance < balanceLimit {
-		var am AbnormalMission
-		am.Id = task.Id
+
+		var am abnormal_task.Task
+		am.UserID = task.UserID
 		am.MissionID = 0
 		am.Mission.Balance = balance
 		am.Mission.Cost = 0
@@ -185,36 +192,38 @@ func handler_DataAnalysis(delivery amqp.Delivery, map_pub map[string]*RabbitMQ.R
 		if err != nil {
 			log.Fatalf("Error encoding json: %s", err)
 		}
-		sendEmail(string(jsonAm), emailAddress)
+		fmt.Println("已向", emailAddress, "余额异常警告！")
+		go sendEmail(string(jsonAm), emailAddress)
 	}
 
-	if consumptionAmount := task.ComsumptionCondition.ComsumptionAmount; consumptionAmount < consumptionLimit {
-		var am AbnormalMission
-		am.Id = task.Id
+	if consumptionAmount := task.ConsumptionCondition.ConsumptionAmount; consumptionAmount > consumptionLimit {
+		var am abnormal_task.Task
+		am.UserID = task.UserID
 		am.MissionID = 1
 		am.Mission.Balance = 0
 		am.Mission.Cost = consumptionAmount
 		am.Mission.TimeStamp = task.TimeStamp
 
-		cntComsumption := 0
-		for _, v := range comsumptionList {
-			if cntComsumption >= 3 {
+		cntConsumption := 0
+		for _, v := range consumptionList {
+			if cntConsumption >= 3 {
 				break
 			}
 			consumption := v
-			ac := AbnormalConsumption{
+			ac := abnormal_task.Consumption{
 				ConsumptionName:   consumption.SubscriptionName,
 				ConsumptionAmount: consumption.SubscriptionAmount,
 			}
 			am.Mission.AbnormalConsumption = append(am.Mission.AbnormalConsumption, ac)
-			cntComsumption++
+			cntConsumption++
 		}
 
 		jsonAm, err := json.Marshal(am)
 		if err != nil {
 			log.Fatalf("Error encoding json: %s", err)
 		}
-		sendEmail(string(jsonAm), emailAddress)
+		fmt.Println("已向", emailAddress, "发出消费异常警告！")
+		go sendEmail(string(jsonAm), emailAddress)
 	}
 
 	return nil
@@ -222,5 +231,5 @@ func handler_DataAnalysis(delivery amqp.Delivery, map_pub map[string]*RabbitMQ.R
 
 func sendEmail(jsonStr string, email_address string) {
 	/* 这里调用你的包里面的发送函数，我不细写了重复 */
-	email.AbnormalTaskSend(jsonStr, email_address)
+	//email.AbnormalTaskSend(jsonStr, email_address)
 }
