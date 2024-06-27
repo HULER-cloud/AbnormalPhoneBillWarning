@@ -13,31 +13,43 @@ import (
 
 func QueryDatabaseTimer(ctx context.Context, rdb *redis.Client, db *gorm.DB, AwakeSpider func(string, uint, string, string)) {
 	// 输出程序开始运行时的当前时间
-	startTime := time.Now()
+	nowTime := time.Now()
+	startTime := time.Date(1, 1, 1, nowTime.Hour(), nowTime.Minute(), nowTime.Second(), 0, nowTime.Location())
+	fmt.Println(startTime)
 
 	// 计算下一次输出的时间
-	//nextQueryTime := startTime.Add(constants.QueryInterval)
-	nextQueryTime := startTime.Add(time.Second * 60)
-	log.Println(nextQueryTime)
+	nextQueryTime := nowTime.Add(constants.QueryInterval)
+	//fmt.Println(nextQueryTime)
+
 	// 启动定时器，每隔一段时间检查一次是否到达下一次输出时间
-	timer := time.NewTimer(nextQueryTime.Sub(startTime))
+	timer := time.NewTimer(time.Until(nextQueryTime))
 	defer timer.Stop()
 	for range timer.C {
+		//fmt.Printf("计时器唤起\n")
 		endTime := startTime.Add(constants.QueryInterval)
+		//fmt.Println(startTime, endTime)
 		results, _ := GetUsersWithTimeBetween(ctx, rdb, startTime, endTime)
-		fmt.Println(results)
+
 		// 这个定时器一般一个小时才唤醒一次，这里可以用协程但是没必要
 		go func() {
+			//fmt.Printf("协程唤起\n")
+			for _, v := range results {
+				fmt.Println(v)
+			}
+			//fmt.Printf("开始按用户执行\n")
 			for _, userID := range results {
+				//fmt.Println(userID)
 				user, err := GetUserFromDB(ctx, rdb, db, atoi(userID))
 				if err != nil {
-					fmt.Printf("查询用户数据时出错：%v", err)
+					log.Printf("查询用户数据时出错：%v\n", err)
 				}
+				fmt.Printf("执行%d的爬虫任务\n", userID)
 				AwakeSpider(user.Province, user.ID, user.Phone, user.PhonePassword)
 			}
 		}()
 
 		// 计算下一次输出的时间
+		startTime = endTime
 		nextQueryTime = nextQueryTime.Add(constants.QueryInterval)
 		timer.Reset(time.Until(nextQueryTime))
 	}

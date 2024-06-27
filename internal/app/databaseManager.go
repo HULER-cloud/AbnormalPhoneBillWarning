@@ -138,7 +138,7 @@ func PreloadDataToRedis(ctx context.Context, rdb *redis.Client, db *gorm.DB) err
 		return err
 	}
 
-	// 加载用户数据
+	// 加载用户数据到Redis
 	for _, user := range users {
 		userData, err := json.Marshal(user)
 		if err != nil {

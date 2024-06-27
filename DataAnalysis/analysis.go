@@ -3,6 +3,7 @@ package dataanalysis
 import (
 	"AbnormalPhoneBillWarning/DataAnalysis/RabbitMQ"
 	"AbnormalPhoneBillWarning/abnormal_task"
+	"AbnormalPhoneBillWarning/email"
 	"AbnormalPhoneBillWarning/global"
 	"AbnormalPhoneBillWarning/models"
 	"AbnormalPhoneBillWarning/utils/utils_spider"
@@ -133,6 +134,7 @@ func (c ConsumptionList) Less(i, j int) bool {
 }
 
 func DataAnalysis() {
+	fmt.Println(123456)
 	mq_consumer := RabbitMQ.New_RabbitMQ_Work("PythonCrawlerResult")
 	defer mq_consumer.Destroy()
 
@@ -149,6 +151,7 @@ func DataAnalysis() {
 }
 
 func handler_DataAnalysis(delivery amqp.Delivery, map_pub map[string]*RabbitMQ.RabbitMQ, pub_name []string) error {
+
 	// 读取脚本结果
 	var task utils_spider.SpiderInfo
 	err := json.Unmarshal(delivery.Body, &task)
@@ -231,5 +234,5 @@ func handler_DataAnalysis(delivery amqp.Delivery, map_pub map[string]*RabbitMQ.R
 
 func sendEmail(jsonStr string, email_address string) {
 	/* 这里调用你的包里面的发送函数，我不细写了重复 */
-	//email.AbnormalTaskSend(jsonStr, email_address)
+	email.AbnormalTaskSend(jsonStr, email_address)
 }

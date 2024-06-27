@@ -28,6 +28,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.firefox.options import Options
 import json
 from datetime import datetime
+import pika
 
 # 登录的网站
 url = 'https://login.189.cn/web/login'
@@ -227,10 +228,39 @@ def txt2json(input_file):
         "consumption_set":
             subscription_set
     }
-    print(json.dumps(data))
+    # print(json.dumps(data))
     # 写入 JSON 文件
     # with open(output_file, 'w', encoding='utf-8') as f:
     #     json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+    # 建立到RabbitMQ服务器的连接
+    user_info = pika.PlainCredentials('guest', 'guest')
+    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost', 5672, '/', user_info))
+    channel = connection.channel()
+    # 声明队列（如果不存在的话）
+    channel.queue_declare(queue='PythonCrawlerResult',durable=True)
+    def send_json(myjson):
+        # 将Python字典转换为JSON字符串
+        print(1)
+        json_data = json.dumps(myjson, ensure_ascii=False)  # ensure_ascii=False用于支持中文显示
+        print(2)
+        # 发布JSON消息到RabbitMQ
+        channel.basic_publish(exchange='',
+                              routing_key='PythonCrawlerResult',
+                              body=json_data.encode('utf-8'))  # 需要将字符串编码为字节流
+        print(f"已发送JSON消息：{json_data}")
+
+    # 示例用法：
+    # my_data = {"姓名": "张三", "年龄": 30, "城市": "北京"}
+    # send_json(my_data)
+
+    send_json(data)
+
+    # 关闭与RabbitMQ的连接
+    connection.close()
+
+
 
 
 

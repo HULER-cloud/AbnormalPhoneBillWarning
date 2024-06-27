@@ -169,3 +169,7 @@ func JSONProcess(output []byte, userID uint) {
 		return
 	}
 }
+
+func TestFun(province string, userID uint, phoneNum string, pwd string) {
+	fmt.Println(province, userID, phoneNum, pwd)
+}

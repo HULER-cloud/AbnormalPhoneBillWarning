@@ -1,11 +1,13 @@
 package app
 
 import (
+	"AbnormalPhoneBillWarning/global"
 	"AbnormalPhoneBillWarning/internal/constants"
 	"AbnormalPhoneBillWarning/utils/utils_spider"
 	"container/heap"
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -44,6 +46,11 @@ func (h *MinHeap) Pop() interface{} {
 }
 
 func InitDBandTable(ctx context.Context, rdb *redis.Client, db *gorm.DB) {
+	err := PreloadDataToRedis(context.Background(), global.Redis, global.DB)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 	// 新建时间表
 	att := NewTimeTable()
 	// 初始化时间表
@@ -73,7 +80,7 @@ func (attSelf *accessTimeTable) initTimeTable(ctx context.Context, rdb *redis.Cl
 	endTime := startTime.Add(constants.QueryInterval)
 	for i := 0; i < attSelf.tableSize; i++ {
 		results, _ := GetUsersWithTimeBetween(ctx, rdb, startTime, endTime)
-		fmt.Println(i, results)
+		//fmt.Println(i, results)
 		attSelf.timeTable = append(attSelf.timeTable, len(results))
 
 		// 迭代计算下一个时间段
