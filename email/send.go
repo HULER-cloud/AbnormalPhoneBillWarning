@@ -4,32 +4,30 @@ import (
 	"AbnormalPhoneBillWarning/abnormal_task"
 	"AbnormalPhoneBillWarning/global"
 	"AbnormalPhoneBillWarning/models"
-	"encoding/json"
 	"fmt"
 	"log"
 )
 
 // 以recv开头的三个都没用了，只看send就行
 
-func AbnormalTaskSend(jsonStr string, email_address string) {
-	fmt.Println(jsonStr)
+func AbnormalTaskSend(task abnormal_task.Task) {
+	//fmt.Println(jsonStr)
 	// 从json反序列化为异常任务结构体对象
-	task := abnormal_task.Task{}
-	err := json.Unmarshal([]byte(jsonStr), &task)
+	//task := abnormal_task.Task{}
+	//err := json.Unmarshal([]byte(jsonStr), &task)
 	//fmt.Println(abnormal_task)
-
 	var userModel models.UserModel
-	err = global.DB.Where("id = ?", task.UserID).Take(&userModel).Error
+	err := global.DB.Where("id = ?", task.UserID).Take(&userModel).Error
 	if err != nil {
 		log.Println(err)
 		return
 	}
-
+	fmt.Println("here")
 	// 余额异常
 	if task.MissionID == 0 {
 		main_text := fmt.Sprintf("您的当前话费余额为%.2f元，已低于%.2f元，请及时充值！", task.Mission.Balance, userModel.BalanceThreshold)
 		err = NewBalanceWarning().Send(
-			email_address,
+			task.Email,
 			BalanceWarning,
 			main_text,
 		)
@@ -41,7 +39,7 @@ func AbnormalTaskSend(jsonStr string, email_address string) {
 			main_text += v.ConsumptionName + "  " + fmt.Sprintf("%.2f", v.ConsumptionAmount) + "<br>"
 		}
 		err = NewConsumptionWarning().Send(
-			email_address,
+			task.Email,
 			ConsumptionWarning,
 			main_text,
 		)

@@ -1,9 +1,10 @@
 package dataanalysis
 
+//package main
+
 import (
 	"AbnormalPhoneBillWarning/DataAnalysis/RabbitMQ"
 	"AbnormalPhoneBillWarning/abnormal_task"
-	"AbnormalPhoneBillWarning/email"
 	"AbnormalPhoneBillWarning/global"
 	"AbnormalPhoneBillWarning/models"
 	"AbnormalPhoneBillWarning/utils/utils_spider"
@@ -134,7 +135,7 @@ func (c ConsumptionList) Less(i, j int) bool {
 }
 
 func DataAnalysis() {
-	fmt.Println(123456)
+	//fmt.Println(123456)
 	mq_consumer := RabbitMQ.New_RabbitMQ_Work("PythonCrawlerResult")
 	defer mq_consumer.Destroy()
 
@@ -187,21 +188,23 @@ func handler_DataAnalysis(delivery amqp.Delivery, map_pub map[string]*RabbitMQ.R
 
 		var am abnormal_task.Task
 		am.UserID = task.UserID
+		am.Email = emailAddress
 		am.MissionID = 0
 		am.Mission.Balance = balance
 		am.Mission.Cost = 0
 		am.Mission.TimeStamp = task.TimeStamp
-		jsonAm, err := json.Marshal(am)
-		if err != nil {
-			log.Fatalf("Error encoding json: %s", err)
-		}
+		//jsonAm, err := json.Marshal(am)
+		//if err != nil {
+		//	log.Fatalf("Error encoding json: %s", err)
+		//}
 		fmt.Println("已向", emailAddress, "余额异常警告！")
-		go sendEmail(string(jsonAm), emailAddress)
+		go sendEmail(am)
 	}
 
 	if consumptionAmount := task.ConsumptionCondition.ConsumptionAmount; consumptionAmount > consumptionLimit {
 		var am abnormal_task.Task
 		am.UserID = task.UserID
+		am.Email = emailAddress
 		am.MissionID = 1
 		am.Mission.Balance = 0
 		am.Mission.Cost = consumptionAmount
@@ -221,18 +224,44 @@ func handler_DataAnalysis(delivery amqp.Delivery, map_pub map[string]*RabbitMQ.R
 			cntConsumption++
 		}
 
-		jsonAm, err := json.Marshal(am)
-		if err != nil {
-			log.Fatalf("Error encoding json: %s", err)
-		}
+		//jsonAm, err := json.Marshal(am)
+		//if err != nil {
+		//	log.Fatalf("Error encoding json: %s", err)
+		//}
 		fmt.Println("已向", emailAddress, "发出消费异常警告！")
-		go sendEmail(string(jsonAm), emailAddress)
+		go sendEmail(am)
 	}
 
 	return nil
 }
 
-func sendEmail(jsonStr string, email_address string) {
-	/* 这里调用你的包里面的发送函数，我不细写了重复 */
-	email.AbnormalTaskSend(jsonStr, email_address)
+func test() {
+	task := abnormal_task.Task{
+		UserID:    1,
+		Email:     "2799591178@qq.com",
+		MissionID: 1,
+		Mission:   abnormal_task.Mission{},
+	}
+	sendEmail(task)
+}
+
+func sendEmail(task abnormal_task.Task) {
+	///* 这里调用你的包里面的发送函数，我不细写了重复 */
+	//Message := abnormal_task.Task{
+	//	Province: province,
+	//	UserID:   userID,
+	//	PhoneNum: phoneNum,
+	//	Password: pwd,
+	//}
+
+	jsonStr, err := json.Marshal(task)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	mq := RabbitMQ.New_RabbitMQ_Work("AbnormalMission")
+	mq.Publish_Work_JSON_String(string(jsonStr))
+
+	defer mq.Destroy()
+	//email.AbnormalTaskSend(jsonStr, email_address)
 }

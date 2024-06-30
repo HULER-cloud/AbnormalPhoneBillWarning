@@ -4,6 +4,7 @@ import (
 	dataanalysis "AbnormalPhoneBillWarning/DataAnalysis"
 	"AbnormalPhoneBillWarning/command"
 	"AbnormalPhoneBillWarning/core"
+	"AbnormalPhoneBillWarning/email"
 	"AbnormalPhoneBillWarning/global"
 	"AbnormalPhoneBillWarning/internal/app"
 	"AbnormalPhoneBillWarning/routers"
@@ -26,9 +27,17 @@ func main() {
 	//utils_spider.TTT()
 	//go app.InitTimeTable()
 	//go app.UpdateDefaultAccessTimer(utils_spider.Spider)
+	// 启动定时器
 	app.InitDBandTable(context.Background(), global.Redis, global.DB)
+	// 启动分析器
 	go dataanalysis.DataAnalysis()
 
+	// 多开几个邮件服务，竞争消费队列提高效率
+	go email.MultipleSend()
+	go email.MultipleSend()
+	go email.MultipleSend()
+
+	// 启动服务器主体监听请求
 	routers.InitRouter()
 	addr := global.Config.System.Addr()
 	log.Printf("服务器运行在[%s]\n", addr)
@@ -38,3 +47,8 @@ func main() {
 	}
 
 }
+
+//func main() {
+//	go email.MultipleSend()
+//	time.Sleep(time.Second * 5)
+//}

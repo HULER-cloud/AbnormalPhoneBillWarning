@@ -56,5 +56,6 @@ func (UserAPI) UserInfoUpdateView(c *gin.Context) {
 		response.FailedWithMsg("用户信息修改失败！", c)
 		return
 	}
+	//app.PreloadDataToRedis(context.Background(), global.Redis, global.DB)
 	response.OKWithMsg("用户信息修改成功！", c)
 }
