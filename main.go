@@ -10,9 +10,19 @@ import (
 	"AbnormalPhoneBillWarning/routers"
 	"context"
 	"log"
+	"os"
 )
 
 func main() {
+
+	file, err := os.OpenFile("logfile.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("无法打开日志文件: %v", err)
+	}
+	defer file.Close()
+	// 设置日志输出到文件
+	log.SetOutput(file)
+
 	core.InitConf()
 	core.InitGorm()
 	core.InitRedis()
@@ -41,7 +51,7 @@ func main() {
 	routers.InitRouter()
 	addr := global.Config.System.Addr()
 	log.Printf("服务器运行在[%s]\n", addr)
-	err := global.Router.Run(addr)
+	err = global.Router.Run(addr)
 	if err != nil {
 		log.Fatal("服务器启动失败！")
 	}

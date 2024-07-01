@@ -54,6 +54,8 @@ type MQMessage1 struct {
 
 func Spider(province string, userID uint, phoneNum string, pwd string) {
 
+	// 加一下月初不调用的逻辑
+
 	Message := MQMessage1{
 		Province: province,
 		UserID:   userID,

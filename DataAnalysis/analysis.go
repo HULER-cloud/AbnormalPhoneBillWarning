@@ -10,8 +10,11 @@ import (
 	"AbnormalPhoneBillWarning/utils/utils_spider"
 	"encoding/json"
 	"fmt"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 	"log"
 	"sort"
+	"time"
 
 	"github.com/streadway/amqp"
 )
@@ -103,25 +106,6 @@ type Consumption struct {
 	SubscriptionAmount float32 `json:"subscription_amount"`
 }
 
-// 异常任务结构体，用了abnormal_task.Task
-//type AbnormalMission struct {
-//	UserID    int     `json:"user_id"`
-//	MissionID int     `json:"missionID"`
-//	Mission   Mission `json:"mission"`
-//}
-//
-//type Mission struct {
-//	TimeStamp           string                `json:"timeStamp"`
-//	Balance             float32               `json:"balance"`
-//	Cost                float32               `json:"cost"`
-//	AbnormalConsumption []AbnormalConsumption `json:"abnormal_consumption"`
-//}
-//
-//type AbnormalConsumption struct {
-//	ConsumptionName   string  `json:"consumption_name"`
-//	ConsumptionAmount float32 `json:"consumption_amount"`
-//}
-
 func (c ConsumptionList) Len() int {
 	return len(c)
 }
@@ -135,7 +119,6 @@ func (c ConsumptionList) Less(i, j int) bool {
 }
 
 func DataAnalysis() {
-	//fmt.Println(123456)
 	mq_consumer := RabbitMQ.New_RabbitMQ_Work("PythonCrawlerResult")
 	defer mq_consumer.Destroy()
 
@@ -151,8 +134,28 @@ func DataAnalysis() {
 
 }
 
+func initdb() {
+	// 设置数据库连接的dsn
+	dsn := "root:123456@tcp(127.0.0.1:3306)/base_db?charset=utf8&parseTime=true&loc=Local"
+	// 根据dsn连接数据库，并设置数据库操作的日志系统为自定义logger
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	fmt.Println(err)
+	if err != nil {
+		log.Fatalf("初始化数据库[%s]失败！%s\n", dsn, err)
+	}
+	// 获取到数据库对象进行一些设置
+	settingDB, _ := db.DB()
+	settingDB.SetMaxIdleConns(10)                 // 最大空闲连接数
+	settingDB.SetMaxOpenConns(100)                // 最大总连接数
+	settingDB.SetConnMaxLifetime(time.Hour * 100) // 单个连接最大持续时间
+	global.DB = db
+
+	//defer settingDB.Close()
+}
+
 func handler_DataAnalysis(delivery amqp.Delivery, map_pub map[string]*RabbitMQ.RabbitMQ, pub_name []string) error {
 
+	log.Println("已经接收到爬虫返回的json，开始处理...")
 	// 读取脚本结果
 	var task utils_spider.SpiderInfo
 	err := json.Unmarshal(delivery.Body, &task)
@@ -253,7 +256,7 @@ func sendEmail(task abnormal_task.Task) {
 	//	PhoneNum: phoneNum,
 	//	Password: pwd,
 	//}
-
+	log.Printf("准备执行id=%d的邮件发送，消息已经发送到队列\n", task.UserID)
 	jsonStr, err := json.Marshal(task)
 	if err != nil {
 		log.Println(err)

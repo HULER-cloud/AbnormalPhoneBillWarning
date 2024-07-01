@@ -43,7 +43,8 @@ func QueryDatabaseTimer(ctx context.Context, rdb *redis.Client, db *gorm.DB, Awa
 				if err != nil {
 					log.Printf("查询用户数据时出错：%v\n", err)
 				}
-				fmt.Printf("执行%d的爬虫任务\n", userID)
+				fmt.Printf("准备执行%s的爬虫任务\n", userID)
+				log.Printf("准备执行id=%s的爬虫任务，消息已经发送到队列\n", userID)
 				AwakeSpider(user.Province, user.ID, user.Phone, user.PhonePassword)
 			}
 		}()

@@ -40,6 +40,7 @@ func (UserAPI) RegisterCodeView(c *gin.Context) {
 		email.RegisterCode,
 		fmt.Sprintf("您的验证码是：%s<br>该验证码10分钟内有效，请尽快注册！", code))
 	if err != nil {
+		log.Println(err)
 		response.FailedWithMsg("验证码发送失败！", c)
 		return
 	}
