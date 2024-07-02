@@ -21,14 +21,3 @@ type PageInfo struct {
 type DeleteRequest struct {
 	IDList []uint `form:"id_list" json:"id_list"` // 请求删除数据的ID列表
 }
-
-//
-//// 根据id去es里面查数据的请求
-//type ESIDRequest struct {
-//	ID string `json:"id" form:"id" uri:"id"`
-//}
-//
-//// 同理，只不过是批量查
-//type ESIDListRequest struct {
-//	IDList []string `json:"id_list" binding:"required"`
-//}

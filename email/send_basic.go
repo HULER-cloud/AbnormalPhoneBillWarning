@@ -32,8 +32,6 @@ func NewResetCode() SendEmailAPI {
 
 // Send 调用方式是 email.NewCode().Send(arg1目标邮箱地址, arg2邮件类型, arg3邮件正文, arg4业务基本信息)
 func (SendEmailAPI) Send(name, subject, body string) error {
-	//e := info
-	//fmt.Printf("%v", e)
 	return SendEmail(
 		global.Config.Email.User,
 		global.Config.Email.DefaultFromEmail,

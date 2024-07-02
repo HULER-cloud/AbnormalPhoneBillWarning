@@ -41,10 +41,6 @@ type Subscription struct {
 	SubscriptionAmount float32 `json:"subscription_amount"`
 }
 
-func TTT() {
-	Spider("山东", 1, "17353825020", "153231")
-}
-
 type MQMessage1 struct {
 	Province string `json:"province"`
 	UserID   uint   `json:"userid"`
@@ -53,8 +49,6 @@ type MQMessage1 struct {
 }
 
 func Spider(province string, userID uint, phoneNum string, pwd string) {
-
-	// 加一下月初不调用的逻辑
 
 	Message := MQMessage1{
 		Province: province,
@@ -73,48 +67,25 @@ func Spider(province string, userID uint, phoneNum string, pwd string) {
 
 	defer mq.Destroy()
 
-	//var targetFile string
-	//if province == "山东" {
-	//	targetFile = "./utils/utils_spider/slide.py"
-	//} else if province == "广东" {
-	//	targetFile = "./utils/utils_spider/slide_gd.py"
-	//}
-
-	// 一层传参
-	//cmd := exec.Command("python", "./utils/utils_spider/execute.py", province, strconv.Itoa(int(userID)), phoneNum, pwd)
-	//output, err := cmd.Output()
-	//if err != nil {
-	//	fmt.Println("Error:", err)
-	//	return
-	//}
-	//
-	//// 打印爬取结果
-	//fmt.Println(string(output))
-
-	//JSONProcess(output, userID)
-
 }
 
 func JSONProcess(output []byte, userID uint) {
 	var spiderInfo SpiderInfo
 	err := json.Unmarshal(output, &spiderInfo)
 
-	//spiderInfo, err := JSONProcess(string(output))
 	if err != nil {
 		fmt.Println(err)
 	}
-	//fmt.Println(spiderInfo)
 
 	// 更新用户的余额
 	// 尝试获取目标用户信息
-	//fmt.Println(123)
+
 	var userModel models.UserModel
 	count := global.DB.Where("id = ?", userID).
 		Take(&userModel).RowsAffected
 	if count == 0 {
 		return
 	}
-	//fmt.Println(456)
 
 	// 更新信息入库
 	err = global.DB.Model(&userModel).Updates(map[string]any{
@@ -163,7 +134,6 @@ func JSONProcess(output []byte, userID uint) {
 			Take(&userBusinessModel).RowsAffected
 		// 没有的业务新增
 		if count == 0 {
-			//fmt.Println("新增", userID, businessModel.ID)
 			err = global.DB.Create(&models.UserBusinessModel{
 				MODEL:      models.MODEL{},
 				UserID:     userID,
@@ -171,7 +141,6 @@ func JSONProcess(output []byte, userID uint) {
 				Spending:   v.SubscriptionAmount,
 			}).Error
 		} else {
-			//fmt.Println("更新", userID, businessModel.ID)
 			// 有的业务更新
 			err = global.DB.Model(&userBusinessModel).Updates(map[string]any{
 				"user_id":     userID,
@@ -191,8 +160,4 @@ func JSONProcess(output []byte, userID uint) {
 		log.Println(err)
 		return
 	}
-}
-
-func TestFun(province string, userID uint, phoneNum string, pwd string) {
-	fmt.Println(province, userID, phoneNum, pwd)
 }

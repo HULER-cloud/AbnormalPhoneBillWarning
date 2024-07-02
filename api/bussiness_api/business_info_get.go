@@ -2,12 +2,15 @@ package bussiness_api
 
 import (
 	"AbnormalPhoneBillWarning/global"
+	"AbnormalPhoneBillWarning/internal/app"
 	"AbnormalPhoneBillWarning/middleware/mdw_jwt"
 	"AbnormalPhoneBillWarning/models"
 	"AbnormalPhoneBillWarning/routers/response"
 	"AbnormalPhoneBillWarning/utils"
-	"github.com/gin-gonic/gin"
+	"context"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 type BusinessInfo struct {
@@ -23,29 +26,22 @@ func (BusinessAPI) BusinessInfoGetView(c *gin.Context) {
 	var pageInfo models.PageInfo
 	err := c.ShouldBindQuery(&pageInfo)
 	if err != nil {
-		//fmt.Println(err.Error())
 		response.FailedWithDetails(response.ArgumentsError, c)
 		return
 	}
 
 	count, userBusinessList := utils.ListMethod[models.UserBusinessModel](claims.UserID, pageInfo)
 	var returnList []BusinessInfo
-	//var businessList []models.BusinessModel
-	//err=global.DB.Where("id in ?",).Find(&businessList).Error
-	//if err != nil {
-	//
-	//}
 
 	for _, userBusiness := range userBusinessList {
-		var businessModel models.BusinessModel
-		err = global.DB.Where("id = ?", userBusiness.BusinessID).Take(&businessModel).Error
+		businessName, err := app.GetBusinessNameByID(context.Background(), global.Redis, userBusiness.BusinessID)
 		if err != nil {
 			response.FailedWithMsg("查询用户当前业务失败，请重试！", c)
 			return
 		}
 
 		resp := BusinessInfo{
-			BusinessName: businessModel.BusinessName,
+			BusinessName: businessName,
 			Spending:     userBusiness.Spending,
 			QueryDate:    userBusiness.UpdatedAt,
 		}
@@ -55,7 +51,6 @@ func (BusinessAPI) BusinessInfoGetView(c *gin.Context) {
 		if time.Now().Sub(resp.QueryDate).Hours() < float64(36) {
 			returnList = append(returnList, resp)
 		}
-		//returnList = append(returnList, resp)
 	}
 
 	response.OKWithList(count, returnList, c)

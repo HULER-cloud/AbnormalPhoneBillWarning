@@ -8,14 +8,10 @@ import (
 	"log"
 )
 
-// 以recv开头的三个都没用了，只看send就行
-
 func AbnormalTaskSend(task abnormal_task.Task) {
-	//fmt.Println(jsonStr)
+
 	// 从json反序列化为异常任务结构体对象
-	//task := abnormal_task.Task{}
-	//err := json.Unmarshal([]byte(jsonStr), &task)
-	//fmt.Println(abnormal_task)
+
 	var userModel models.UserModel
 	err := global.DB.Where("id = ?", task.UserID).Take(&userModel).Error
 	if err != nil {

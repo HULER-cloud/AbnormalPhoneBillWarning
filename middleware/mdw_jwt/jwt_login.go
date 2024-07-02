@@ -50,39 +50,3 @@ func JWTUser() gin.HandlerFunc {
 		c.Set("claims", claims)
 	}
 }
-
-// 没有admin以及一大堆与之相伴的权限了
-
-//func JWTAdmin() gin.HandlerFunc {
-//	return func(c *gin.Context) {
-//		// 获取token
-//		token := c.Request.Header.Get("token")
-//		if token == "" {
-//			response.FailedWithMsg("token缺失！", c)
-//			c.Abort()
-//			return
-//		}
-//		// 如果token在redis中，说明已经注销了
-//		if utils_redis.CheckLogout(token) {
-//			response.FailedWithMsg("用户登录已过期！", c)
-//			c.Abort()
-//			return
-//		}
-//		// 解析token
-//		claims, err := ParseToken(token)
-//		if err != nil {
-//			response.FailedWithMsg("token错误！", c)
-//			c.Abort()
-//			return
-//		}
-//		// 额外检查是否是管理员，非管理员走这个中间件被禁止
-//		if claims.Role != cust_type.Admin {
-//			response.FailedWithMsg("非管理员！", c)
-//			c.Abort()
-//			return
-//		}
-//		// 设置claims属性
-//		fmt.Println(claims)
-//		c.Set("claims", claims)
-//	}
-//}

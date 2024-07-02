@@ -3,7 +3,6 @@ package app
 import (
 	"AbnormalPhoneBillWarning/internal/constants"
 	"AbnormalPhoneBillWarning/models"
-	"AbnormalPhoneBillWarning/utils"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -13,12 +12,6 @@ import (
 	"github.com/go-redis/redis/v8"
 	"gorm.io/gorm"
 )
-
-type DatabaseManager struct {
-	rdb redis.Client
-	db  gorm.DB
-	ctx context.Context
-}
 
 // 获取查询时间在指定时间范围内的用户Id
 func GetUsersWithTimeBetween(ctx context.Context, rdb *redis.Client, startTime, endTime time.Time) ([]string, error) {
@@ -47,6 +40,19 @@ func GetBusinessNameByID(ctx context.Context, rdb *redis.Client, businessID uint
 	}
 
 	return business.BusinessName, nil
+}
+
+func GetUserIDByEmail(ctx context.Context, rdb *redis.Client, email string) (uint, error) {
+	idStr, err := rdb.Get(ctx, email).Result()
+	if err != nil {
+		if err == redis.Nil {
+			fmt.Printf("Email %s does not exist in Redis\n", email)
+		}
+		return 0, err
+	}
+	var id uint
+	fmt.Sscanf(idStr, "%d", &id)
+	return id, nil
 }
 
 func GetUserFromDB(ctx context.Context, rdb *redis.Client, db *gorm.DB, userID uint) (*models.UserModel, error) {
@@ -140,22 +146,30 @@ func PreloadDataToRedis(ctx context.Context, rdb *redis.Client, db *gorm.DB) err
 
 	// 加载用户数据到Redis
 	for _, user := range users {
+		err := rdb.Set(ctx, user.Email, user.ID, 0).Err()
+		if err != nil {
+			fmt.Printf("Failed to save user-email data to Redis: %v", err)
+			return err
+		}
+
 		userData, err := json.Marshal(user)
 		if err != nil {
 			return err
 		}
 		userKey := fmt.Sprintf("user:%d", user.ID)
-		if err := rdb.Set(ctx, userKey, userData, constants.DefaultExpireInterval).Err(); err != nil {
+		if err := rdb.Set(ctx, userKey, userData, 0).Err(); err != nil {
+			fmt.Printf("Failed to save user data to Redis: %v", err)
 			return err
 		}
 
 		// 初始化查询时间有序集合
-		queryTime := utils.ParseQueryTime(user.QueryTime)
+		queryTime := time.Now()
 		queryTimeScore := float64(queryTime.Unix())
 		if err := rdb.ZAdd(ctx, "user_access_times", &redis.Z{
 			Score:  queryTimeScore,
 			Member: user.ID,
 		}).Err(); err != nil {
+			fmt.Printf("Failed to add user-access-time data to Redis: %v", err)
 			return err
 		}
 	}
@@ -192,88 +206,142 @@ func PreloadDataToRedis(ctx context.Context, rdb *redis.Client, db *gorm.DB) err
 }
 
 func SaveUser(ctx context.Context, rdb *redis.Client, db *gorm.DB, user *models.UserModel) error {
-	return db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Save(user).Error; err != nil {
-			return err
-		}
+	// 先更新redis
+	userKey := fmt.Sprintf("user:%d", user.ID)
+	oldUserData, err := rdb.Get(ctx, userKey).Result()
 
-		// 获取更新的时间戳
-		if err := tx.First(&user, user.ID).Error; err != nil {
+	if err == redis.Nil {
+		// 新数据
+		user.CreatedAt = time.Now()
+		user.UpdatedAt = time.Now()
+	} else if err != nil {
+		fmt.Println("检索redis时出错:", err)
+		return err
+	} else { // 更新数据，仅继承创建时间
+		var oldUser models.UserModel
+		if err := json.Unmarshal([]byte(oldUserData), &oldUser); err != nil {
 			return err
 		}
+		user.CreatedAt = oldUser.CreatedAt // 保持创建时间一致
+		user.UpdatedAt = time.Now()
+	}
 
-		// 写Redis
-		userData, err := json.Marshal(user)
-		if err != nil {
-			return err
-		}
+	userData, err := json.Marshal(user)
+	if err != nil {
+		return err
+	}
+	err = rdb.Set(ctx, fmt.Sprintf("user:%d", user.ID), userData, 0).Err()
+	if err != nil {
+		return err
+	}
+	// 更新邮箱-ID表
+	err = rdb.Set(ctx, user.Email, user.ID, 0).Err()
+	if err != nil {
+		fmt.Printf("Failed to save user-email data to Redis: %v", err)
+		return err
+	}
 
-		err = rdb.Set(ctx, fmt.Sprintf("user:%d", user.ID), userData, constants.DefaultExpireInterval).Err()
-		if err != nil {
-			return err
+	// 异步更新MySQL
+	go func() {
+		if err := db.Save(user).Error; err != nil {
+			fmt.Println("更新MySQL时出错:", err)
+			return
 		}
-		return nil
-	})
+	}()
+
+	return nil
 }
 
 func SaveBusiness(ctx context.Context, rdb *redis.Client, db *gorm.DB, business *models.BusinessModel) error {
-	return db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Save(business).Error; err != nil {
+	// 先更新Redis
+	businessKey := fmt.Sprintf("business:%d", business.ID)
+	oldBusinessData, err := rdb.Get(ctx, businessKey).Result()
+
+	if err == redis.Nil {
+		// 新数据
+		business.CreatedAt = time.Now()
+		business.UpdatedAt = time.Now()
+	} else if err != nil {
+		fmt.Println("检索redis时出错:", err)
+		return err
+	} else { // 更新数据，仅继承创建时间
+		var oldBusiness models.BusinessModel
+		if err := json.Unmarshal([]byte(oldBusinessData), &oldBusiness); err != nil {
 			return err
 		}
+		business.CreatedAt = oldBusiness.CreatedAt // 保持创建时间一致
+		business.UpdatedAt = time.Now()
+	}
 
-		if err := tx.First(&business, business.ID).Error; err != nil {
-			return err
+	businessData, err := json.Marshal(business)
+	if err != nil {
+		return err
+	}
+	err = rdb.Set(ctx, businessKey, businessData, 0).Err()
+	if err != nil {
+		return err
+	}
+
+	// 异步更新MySQL
+	go func() {
+		if err := db.Save(business).Error; err != nil {
+			fmt.Println("更新MySQL时出错:", err)
+			return
 		}
+	}()
 
-		businessData, err := json.Marshal(business)
-		if err != nil {
-			return err
-		}
-
-		err = rdb.Set(ctx, fmt.Sprintf("business:%d", business.ID), businessData, 0).Err()
-
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	return nil
 }
 
-func SaveUserBusiness(ctx context.Context, rdb *redis.Client, db *gorm.DB, ubm *models.UserBusinessModel, businessName string) error {
-	return db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Save(ubm).Error; err != nil {
-			return err
-		}
+func SaveUserBusiness(ctx context.Context, rdb *redis.Client, db *gorm.DB, ub *models.UserBusinessModel) error {
+	businessName, _ := GetBusinessNameByID(ctx, rdb, ub.BusinessID)
 
-		if err := tx.First(&ubm, ubm.ID).Error; err != nil {
-			return err
-		}
+	ubKey := fmt.Sprintf("user:%d:business:%s", ub.UserID, businessName)
 
-		ubmData, err := json.Marshal(ubm)
-		if err != nil {
+	// 尝试从Redis获取现有数据
+	oldData, err := rdb.Get(ctx, ubKey).Result()
+	if err == redis.Nil {
+		ub.CreatedAt = time.Now()
+		ub.UpdatedAt = time.Now()
+	} else if err != nil {
+		fmt.Println("检索redis时出错:", err)
+		return err
+	} else {
+		var oldUBM models.UserBusinessModel
+		if err := json.Unmarshal([]byte(oldData), &oldUBM); err != nil {
 			return err
 		}
+		ub.CreatedAt = oldUBM.CreatedAt
+		ub.UpdatedAt = time.Now()
+	}
 
-		redisKey := fmt.Sprintf("user:%d:business:%s", ubm.UserID, businessName)
-		err = rdb.Set(ctx, redisKey, ubmData, constants.DefaultExpireInterval).Err()
-		if err != nil {
-			return err
+	ubmData, err := json.Marshal(ub)
+	if err != nil {
+		return err
+	}
+
+	if err := rdb.Set(ctx, ubKey, ubmData, 0).Err(); err != nil {
+		return err
+	}
+
+	go func() {
+		if err := db.Save(ub).Error; err != nil {
+			fmt.Println("更新MySQL时出错:", err)
+			return
 		}
-		return nil
-	})
+	}()
+
+	return nil
 }
 
 func SaveUserBusinessHistory(db *gorm.DB, ubh *models.UserBusinessHistoryModel) error {
-	return db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Save(ubh).Error; err != nil {
-			return err
+	// 异步更新数据库
+	go func() {
+		if err := db.Save(ubh).Error; err != nil {
+			fmt.Println("更新MySQL时出错:", err)
+			return
 		}
+	}()
 
-		if err := tx.First(&ubh, ubh.ID).Error; err != nil {
-			return err
-		}
-
-		return nil
-	})
+	return nil
 }

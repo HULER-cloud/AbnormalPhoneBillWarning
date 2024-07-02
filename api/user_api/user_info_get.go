@@ -2,9 +2,12 @@ package user_api
 
 import (
 	"AbnormalPhoneBillWarning/global"
+	"AbnormalPhoneBillWarning/internal/app"
 	"AbnormalPhoneBillWarning/middleware/mdw_jwt"
 	"AbnormalPhoneBillWarning/models"
 	"AbnormalPhoneBillWarning/routers/response"
+	"context"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -27,9 +30,10 @@ func (UserAPI) UserInfoGetView(c *gin.Context) {
 	claims := _claims.(*mdw_jwt.MyClaims) // 断言一下，因为拿过来的是any
 
 	var userModel models.UserModel
-	count := global.DB.Where("id = ?", claims.UserID).
-		Take(&userModel).RowsAffected
-	if count == 0 {
+
+	result, err := app.GetUserFromDB(context.Background(), global.Redis, global.DB, claims.UserID)
+	userModel = *result
+	if err != nil {
 		response.FailedWithMsg("用户不存在！", c)
 		return
 	}
@@ -46,14 +50,6 @@ func (UserAPI) UserInfoGetView(c *gin.Context) {
 		PhonePassword:     userModel.PhonePassword,
 		Province:          userModel.Province,
 	}
-	//fmt.Println(userModel)
 
-	//jsonStr, err := json.Marshal(userModel)
-	//if err != nil {
-	//	response.FailedWithMsg("获取用户信息失败，请重试！", c)
-	//	return
-	//}
-	//fmt.Println(jsonStr)
 	response.OKWithData(userInfoModel, c)
-
 }

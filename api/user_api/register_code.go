@@ -3,13 +3,16 @@ package user_api
 import (
 	"AbnormalPhoneBillWarning/email"
 	"AbnormalPhoneBillWarning/global"
+	"AbnormalPhoneBillWarning/internal/app"
 	"AbnormalPhoneBillWarning/models"
 	"AbnormalPhoneBillWarning/routers/response"
 	"AbnormalPhoneBillWarning/utils"
+	"context"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"log"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 type RegisterCodeRequest struct {
@@ -25,9 +28,8 @@ func (UserAPI) RegisterCodeView(c *gin.Context) {
 	}
 
 	// 先判断邮箱是否已经被注册过
-	var user models.UserModel
-	count := global.DB.Where("email = ?", registerCodeRequest.Email).Take(&user).RowsAffected
-	if count != 0 {
+	_, err = app.GetUserIDByEmail(context.Background(), global.Redis, registerCodeRequest.Email)
+	if err != app.ErrNotFoundInRedis {
 		response.FailedWithMsg("该邮箱已被注册过！", c)
 		return
 	}
@@ -40,7 +42,6 @@ func (UserAPI) RegisterCodeView(c *gin.Context) {
 		email.RegisterCode,
 		fmt.Sprintf("您的验证码是：%s<br>该验证码10分钟内有效，请尽快注册！", code))
 	if err != nil {
-		log.Println(err)
 		response.FailedWithMsg("验证码发送失败！", c)
 		return
 	}
@@ -53,7 +54,7 @@ func (UserAPI) RegisterCodeView(c *gin.Context) {
 		SendTime: time.Now(),
 		Type:     "注册",
 	}).Error
-	//fmt.Println(123)
+
 	if err != nil {
 		log.Println(err)
 		response.FailedWithMsg(fmt.Sprintf("邮箱为%s的用户验证码入库失败！", registerCodeRequest.Email), c)

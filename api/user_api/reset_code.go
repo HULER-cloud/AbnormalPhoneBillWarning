@@ -3,13 +3,16 @@ package user_api
 import (
 	"AbnormalPhoneBillWarning/email"
 	"AbnormalPhoneBillWarning/global"
+	"AbnormalPhoneBillWarning/internal/app"
 	"AbnormalPhoneBillWarning/models"
 	"AbnormalPhoneBillWarning/routers/response"
 	"AbnormalPhoneBillWarning/utils"
+	"context"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"log"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 type ResetCodeRequest struct {
@@ -25,9 +28,8 @@ func (UserAPI) ResetCodeView(c *gin.Context) {
 	}
 
 	// 先判断邮箱是否已经被注册过
-	var user models.UserModel
-	count := global.DB.Where("email = ?", resetCodeRequest.Email).Take(&user).RowsAffected
-	if count == 0 {
+	_, err = app.GetUserIDByEmail(context.Background(), global.Redis, resetCodeRequest.Email)
+	if err == app.ErrNotFoundInRedis {
 		response.FailedWithMsg("该邮箱未被注册过！", c)
 		return
 	}
@@ -52,7 +54,7 @@ func (UserAPI) ResetCodeView(c *gin.Context) {
 		SendTime: time.Now(),
 		Type:     "重置",
 	}).Error
-	//fmt.Println(123)
+
 	if err != nil {
 		log.Println(err)
 		response.FailedWithMsg(fmt.Sprintf("邮箱为%s的用户验证码入库失败！", resetCodeRequest.Email), c)

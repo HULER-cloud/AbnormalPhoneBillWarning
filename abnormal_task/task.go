@@ -1,6 +1,6 @@
 package abnormal_task
 
-// 这个应该没有用
+// 异常任务的结构体，用于数据分析->邮件发送
 
 type Task struct {
 	UserID    uint    `json:"user_id" binding:"required"`

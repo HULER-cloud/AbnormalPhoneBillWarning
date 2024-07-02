@@ -32,24 +32,21 @@ func handler_MultipleSend(delivery amqp.Delivery, map_pub map[string]*RabbitMQ.R
 		log.Fatalf("Error decoding json: %s", err)
 		return err
 	}
-	//AbnormalTaskSend(task)
-	TaskSend(task)
+	AbnormalTaskSend(task)
+	//TaskSend(task)
 	return nil
 }
 
 func TaskSend(task abnormal_task.Task) {
-	//fmt.Println(jsonStr)
+
 	// 从json反序列化为异常任务结构体对象
-	//task := abnormal_task.Task{}
-	//err := json.Unmarshal([]byte(jsonStr), &task)
-	//fmt.Println(abnormal_task)
 	var userModel models.UserModel
 	err := global.DB.Where("id = ?", task.UserID).Take(&userModel).Error
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	//fmt.Println("here")
+
 	// 余额异常
 	if task.MissionID == 0 {
 		log.Println("已向", task.Email, "发出余额异常提醒")

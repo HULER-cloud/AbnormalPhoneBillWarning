@@ -2,13 +2,16 @@ package user_api
 
 import (
 	"AbnormalPhoneBillWarning/global"
+	"AbnormalPhoneBillWarning/internal/app"
 	"AbnormalPhoneBillWarning/models"
 	"AbnormalPhoneBillWarning/routers/response"
 	"AbnormalPhoneBillWarning/utils"
+	"context"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"log"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 type UserPasswordResetRequest struct {
@@ -27,17 +30,20 @@ func (UserAPI) UserPasswordResetView(c *gin.Context) {
 
 	// 先判断邮箱是否已经被注册过
 	var userModel models.UserModel
-	count := global.DB.Where("email = ?", userPasswordResetRequest.Email).Take(&userModel).RowsAffected
-	if count == 0 {
+
+	userID, err := app.GetUserIDByEmail(context.Background(), global.Redis, userPasswordResetRequest.Email)
+	if err == app.ErrNotFoundInRedis {
 		response.FailedWithMsg("该邮箱未被注册过！", c)
 		return
 	}
+	result, _ := app.GetUserFromDB(context.Background(), global.Redis, global.DB, userID)
+	userModel = *result
 
 	// 生成验证码并发送在别的地方
 	// 这里是验证发送过去的验证码的逻辑
 	var userCodeModel models.UserCodeModel
 	// 取最新的一条，也即最近一条发送的验证码
-	count = global.DB.Order("created_at desc").Where("email = ? and type = ?", userPasswordResetRequest.Email, "重置").Take(&userCodeModel).RowsAffected
+	count := global.DB.Order("created_at desc").Where("email = ? and type = ?", userPasswordResetRequest.Email, "重置").Take(&userCodeModel).RowsAffected
 	if count == 0 {
 		response.FailedWithMsg("验证码入库失败，请刷新后重试！", c)
 		return
@@ -57,8 +63,10 @@ func (UserAPI) UserPasswordResetView(c *gin.Context) {
 
 	// 一切顺利，密码先加密一下，开始存到数据库中
 	hashPwd := utils.HashPwd(userPasswordResetRequest.Password)
-	//fmt.Printf(hashPwd)
-	err = global.DB.Model(&userModel).Update("password", hashPwd).Error
+
+	userModel.Password = hashPwd
+	err = app.SaveUser(context.Background(), global.Redis, global.DB, &userModel)
+
 	if err != nil {
 		log.Println(err)
 		response.FailedWithMsg(fmt.Sprintf("邮箱为%s的用户重置密码失败！", userPasswordResetRequest.Email), c)

@@ -7,11 +7,10 @@ import (
 	"container/heap"
 	"context"
 	"fmt"
-	"log"
-	"time"
-
 	"github.com/go-redis/redis/v8"
 	"gorm.io/gorm"
+	"log"
+	"time"
 )
 
 // 记住时间表和表堆要同步更新

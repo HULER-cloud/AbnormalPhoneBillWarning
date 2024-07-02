@@ -2,12 +2,15 @@ package user_api
 
 import (
 	"AbnormalPhoneBillWarning/global"
+	"AbnormalPhoneBillWarning/internal/app"
 	"AbnormalPhoneBillWarning/middleware/mdw_jwt"
 	"AbnormalPhoneBillWarning/models"
 	"AbnormalPhoneBillWarning/routers/response"
 	"AbnormalPhoneBillWarning/utils"
-	"github.com/gin-gonic/gin"
+	"context"
 	"log"
+
+	"github.com/gin-gonic/gin"
 )
 
 type UserPasswordUpdateRequest struct {
@@ -27,8 +30,9 @@ func (UserAPI) UserPasswordUpdateView(c *gin.Context) {
 	}
 
 	var userModel models.UserModel
-	count := global.DB.Where("id = ?", claims.UserID).Take(&userModel).RowsAffected
-	if count == 0 {
+	result, err := app.GetUserFromDB(context.Background(), global.Redis, global.DB, claims.UserID)
+	userModel = *result
+	if err != nil {
 		log.Println("用户不存在！")
 		response.FailedWithMsg("用户不存在！", c)
 	}
@@ -41,7 +45,9 @@ func (UserAPI) UserPasswordUpdateView(c *gin.Context) {
 
 	// 生成新密码的哈希值，并入库
 	hashPwd := utils.HashPwd(userPasswordUpdateRequest.Password)
-	err = global.DB.Model(&userModel).Update("password", hashPwd).Error
+
+	userModel.Password = hashPwd
+	err = app.SaveUser(context.Background(), global.Redis, global.DB, &userModel)
 	if err != nil {
 		log.Println("密码修改失败！")
 		response.FailedWithMsg("密码修改失败！", c)

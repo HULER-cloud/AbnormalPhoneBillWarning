@@ -2,11 +2,14 @@ package user_api
 
 import (
 	"AbnormalPhoneBillWarning/global"
+	"AbnormalPhoneBillWarning/internal/app"
 	"AbnormalPhoneBillWarning/middleware/mdw_jwt"
 	"AbnormalPhoneBillWarning/models"
 	"AbnormalPhoneBillWarning/routers/response"
-	"github.com/gin-gonic/gin"
+	"context"
 	"log"
+
+	"github.com/gin-gonic/gin"
 )
 
 type UserInfoUpdateRequest struct {
@@ -29,33 +32,32 @@ func (UserAPI) UserInfoUpdateView(c *gin.Context) {
 		response.FailedWithDetails(response.ArgumentsError, c)
 		return
 	}
-	//fmt.Printf("%+v", userInfoUpdateRequest)
+
 	// 尝试获取目标用户信息
 	var userModel models.UserModel
-	count := global.DB.Where("id = ?", claims.UserID).
-		Take(&userModel).RowsAffected
-	if count == 0 {
+
+	result, err := app.GetUserFromDB(context.Background(), global.Redis, global.DB, claims.UserID)
+	userModel = *result
+	if err != nil {
 		response.FailedWithMsg("用户不存在！", c)
 		return
 	}
 
-	// 这里添加一段验证手机号和密码可用性的代码
-
 	// 更新信息入库
-	err = global.DB.Model(&userModel).Updates(map[string]any{
-		"default_query_time": userInfoUpdateRequest.DefaultQueryTime,
-		"query_time":         userInfoUpdateRequest.QueryTime,
-		"balance_threshold":  userInfoUpdateRequest.BalanceThreshold,
-		"business_threshold": userInfoUpdateRequest.BusinessThreshold,
-		"phone":              userInfoUpdateRequest.Phone,
-		"phone_password":     userInfoUpdateRequest.PhonePassword,
-		"province":           userInfoUpdateRequest.Province,
-	}).Error
+	userModel.DefaultQueryTime = userInfoUpdateRequest.DefaultQueryTime
+	userModel.QueryTime = userInfoUpdateRequest.QueryTime
+	userModel.BalanceThreshold = userInfoUpdateRequest.BalanceThreshold
+	userModel.BusinessThreshold = userInfoUpdateRequest.BusinessThreshold
+	userModel.Phone = userInfoUpdateRequest.Phone
+	userModel.PhonePassword = userInfoUpdateRequest.PhonePassword
+	userModel.Province = userInfoUpdateRequest.Province
+	err = app.SaveUser(context.Background(), global.Redis, global.DB, &userModel)
+
 	if err != nil {
 		log.Println("用户信息修改失败！")
 		response.FailedWithMsg("用户信息修改失败！", c)
 		return
 	}
-	//app.PreloadDataToRedis(context.Background(), global.Redis, global.DB)
+
 	response.OKWithMsg("用户信息修改成功！", c)
 }

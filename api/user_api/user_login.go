@@ -2,14 +2,17 @@ package user_api
 
 import (
 	"AbnormalPhoneBillWarning/global"
+	"AbnormalPhoneBillWarning/internal/app"
 	"AbnormalPhoneBillWarning/middleware/mdw_jwt"
 	"AbnormalPhoneBillWarning/models"
 	"AbnormalPhoneBillWarning/routers/response"
 	"AbnormalPhoneBillWarning/utils"
+	"context"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"log"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 type UserLoginRequest struct {
@@ -26,12 +29,16 @@ func (UserAPI) UserLoginView(c *gin.Context) {
 	}
 	// 检测用户存在与否
 	var userModel models.UserModel
-	count := global.DB.Where("email = ?", userLoginRequest.Email).Take(&userModel).RowsAffected
-	if count == 0 {
+
+	userID, err := app.GetUserIDByEmail(context.Background(), global.Redis, userLoginRequest.Email)
+	if err == app.ErrNotFoundInRedis {
 		log.Println(fmt.Sprintf("邮箱为[%s]的用户不存在！", userLoginRequest.Email))
 		response.FailedWithMsg(fmt.Sprintf("邮箱为[%s]的用户不存在！", userLoginRequest.Email), c)
 		return
 	}
+	result, _ := app.GetUserFromDB(context.Background(), global.Redis, global.DB, userID)
+	userModel = *result
+
 	// 校验密码是否正确
 	pass := utils.CheckPwd(userModel.Password, userLoginRequest.Password)
 	if !pass {

@@ -12,5 +12,4 @@ func BusinessRoute(router *gin.Engine) {
 	router.GET("api/business/info", mdw_jwt.JWTUser(), businessAPI.BusinessInfoGetView)
 	router.GET("api/business/history", mdw_jwt.JWTUser(), businessAPI.BusinessHistoryGetView)
 
-	//router.POST("api/business/check", mdw_jwt.JWTUser(), businessAPI.BusinessHistoryGetView)
 }

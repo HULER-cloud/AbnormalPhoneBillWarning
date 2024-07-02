@@ -2,10 +2,13 @@ package bussiness_api
 
 import (
 	"AbnormalPhoneBillWarning/global"
+	"AbnormalPhoneBillWarning/internal/app"
 	"AbnormalPhoneBillWarning/middleware/mdw_jwt"
 	"AbnormalPhoneBillWarning/models"
 	"AbnormalPhoneBillWarning/routers/response"
 	"AbnormalPhoneBillWarning/utils"
+	"context"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,7 +25,6 @@ func (BusinessAPI) BusinessHistoryGetView(c *gin.Context) {
 	var pageInfo models.PageInfo
 	err := c.ShouldBindQuery(&pageInfo)
 	if err != nil {
-		//fmt.Println(err.Error())
 		response.FailedWithDetails(response.ArgumentsError, c)
 		return
 	}
@@ -31,8 +33,7 @@ func (BusinessAPI) BusinessHistoryGetView(c *gin.Context) {
 	var returnList []BusinessHistory
 
 	for _, userBusinessHistory := range userBusinessHistoryList {
-		var businessModel models.BusinessModel
-		err = global.DB.Where("id = ?", userBusinessHistory.BusinessID).Take(&businessModel).Error
+		businessName, err := app.GetBusinessNameByID(context.Background(), global.Redis, userBusinessHistory.BusinessID)
 		if err != nil {
 			response.FailedWithMsg("查询用户当前业务失败，请重试！", c)
 			return
@@ -40,7 +41,7 @@ func (BusinessAPI) BusinessHistoryGetView(c *gin.Context) {
 
 		resp := BusinessHistory{
 			QueryDate:    userBusinessHistory.QueryDate,
-			BusinessName: businessModel.BusinessName,
+			BusinessName: businessName,
 			Spending:     userBusinessHistory.Spending,
 		}
 		returnList = append(returnList, resp)

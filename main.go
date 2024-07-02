@@ -23,20 +23,19 @@ func main() {
 	// 设置日志输出到文件
 	log.SetOutput(file)
 
+	// 初始化配置项
 	core.InitConf()
 	core.InitGorm()
 	core.InitRedis()
 
-	db, _ := command.ParseCommand()
+	// 判断要不要迁移（新建）表结构
+	db := command.ParseCommand()
 	if *db == true {
 		log.Println("正在初始化数据库表信息...")
 		command.MakeMigrations()
 		return
 	}
 
-	//utils_spider.TTT()
-	//go app.InitTimeTable()
-	//go app.UpdateDefaultAccessTimer(utils_spider.Spider)
 	// 启动定时器
 	app.InitDBandTable(context.Background(), global.Redis, global.DB)
 	// 启动分析器
@@ -57,8 +56,3 @@ func main() {
 	}
 
 }
-
-//func main() {
-//	go email.MultipleSend()
-//	time.Sleep(time.Second * 5)
-//}
